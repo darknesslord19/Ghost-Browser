@@ -65,7 +65,15 @@ class SiteData(val name: String, val sites: List<JSONObject>, val blockHosts: Li
 class MainActivity : Activity() {
     companion object {
         const val ASSET = "https://appassets.androidplatform.net/assets/"
-        val MEDIA_RE = Regex("\\.(m3u8|mp4|webm|m4v|mov)(\\?|#|\$)", RegexOption.IGNORE_CASE)
+        val MEDIA_RE = Regex("\\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\\?|#|/|\$)|m3u8|videoplayback|/hls/.*playlist", RegexOption.IGNORE_CASE)
+        val SNIFF_JS = """(()=>{if(window.__gs)return;window.__gs=1;const seen=new Set();
+const ok=u=>/\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\?|#|\/|${'$'})/i.test(u)||/m3u8|videoplayback/i.test(u);
+const send=u=>{try{if(!u||typeof u!=='string')return;u=new URL(u,location.href).href;if(!/^https?:/.test(u)||seen.has(u)||!ok(u))return;seen.add(u);GhostSniff.postMessage(JSON.stringify({u:u,r:location.href}))}catch(e){}};
+const of=window.fetch;if(of)window.fetch=function(a){try{send(typeof a==='string'?a:a&&a.url)}catch(e){}return of.apply(this,arguments)};
+const xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{send(String(u))}catch(e){}return xo.apply(this,arguments)};
+const scan=()=>{try{document.querySelectorAll('video,source').forEach(e=>{send(e.currentSrc);send(e.src);send(e.getAttribute('src'))})}catch(e){}};
+setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
+})();"""
         val DIRECT_RE = Regex("^https?://\\S+\\.(mp4|m3u8|webm|mkv|mov|m4v)(\\?\\S*)?(#.*)?\$", RegexOption.IGNORE_CASE)
     }
 
@@ -773,6 +781,19 @@ class MainActivity : Activity() {
             }
         }
 
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            try {
+                WebViewCompat.addWebMessageListener(wv, "GhostSniff", setOf("*")) { _, message, _, _, _ ->
+                    try {
+                        val o = JSONObject(message.data ?: "")
+                        if (!tab.isPlayer && !tab.isInternal) sniff(tab, o.optString("u"), o.optString("r"))
+                    } catch (_: Exception) {}
+                }
+                WebViewCompat.addDocumentStartJavaScript(wv, SNIFF_JS, setOf("*"))
+            } catch (_: Exception) {}
+        }
+
         wv.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
             try {
                 val r = DownloadManager.Request(Uri.parse(url))
@@ -937,10 +958,11 @@ class MainActivity : Activity() {
         bar.visibility = View.VISIBLE
     }
 
-    private fun sniff(tab: Tab, url: String) {
+    private fun sniff(tab: Tab, url: String, ref: String = "") {
+        if (url.isEmpty()) return
         main.post {
             if (tab.media.any { it.url == url }) return@post
-            tab.media.add(0, MediaItem(url, tab.url, if (url.contains("m3u8", true)) "HLS" else "Video"))
+            tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (url.contains("m3u8", true)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video"))
             while (tab.media.size > 15) tab.media.removeAt(tab.media.size - 1)
             if (tab === cur) { updateUi(); askPlayer(tab) }
         }
