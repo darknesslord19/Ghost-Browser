@@ -65,9 +65,10 @@ class SiteData(val name: String, val sites: List<JSONObject>, val blockHosts: Li
 class MainActivity : Activity() {
     companion object {
         const val ASSET = "https://appassets.androidplatform.net/assets/"
-        val MEDIA_RE = Regex("\\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\\?|#|/|\$)|m3u8|videoplayback|/hls/.*playlist", RegexOption.IGNORE_CASE)
+        val IMG_RE = Regex("\\.(jpe?g|png|webp|gif|svg|ts|m4s|vtt|srt|css|js)(\\?|#|\$)", RegexOption.IGNORE_CASE)
+        val MEDIA_RE = Regex("\\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\\?|#|\$)|m3u8|videoplayback", RegexOption.IGNORE_CASE)
         val SNIFF_JS = """(()=>{if(window.__gs)return;window.__gs=1;const seen=new Set();
-const ok=u=>/\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\?|#|\/|${'$'})/i.test(u)||/m3u8|videoplayback/i.test(u);
+const ok=u=>!/\.(jpe?g|png|webp|gif|svg|ts|m4s|vtt|srt|css|js)(\?|#|${'$'})/i.test(u)&&(/\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\?|#|${'$'})/i.test(u)||/m3u8|videoplayback/i.test(u));
 const send=u=>{try{if(!u||typeof u!=='string')return;u=new URL(u,location.href).href;if(!/^https?:/.test(u)||seen.has(u)||!ok(u))return;seen.add(u);GhostSniff.postMessage(JSON.stringify({u:u,r:location.href}))}catch(e){}};
 const of=window.fetch;if(of)window.fetch=function(a){try{send(typeof a==='string'?a:a&&a.url)}catch(e){}return of.apply(this,arguments)};
 const xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{send(String(u))}catch(e){}return xo.apply(this,arguments)};
@@ -959,7 +960,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
     }
 
     private fun sniff(tab: Tab, url: String, ref: String = "") {
-        if (url.isEmpty()) return
+        if (url.isEmpty() || IMG_RE.containsMatchIn(url)) return
         main.post {
             if (tab.media.any { it.url == url }) return@post
             tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (url.contains("m3u8", true)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video"))
