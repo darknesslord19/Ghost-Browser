@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<link rel="stylesheet" href="shared.css">
+<style>
+html, body { background: transparent; overflow: hidden; user-select: none; }
+#chrome { position: fixed; top: 0; left: 0; right: 0; height: 84px; background: var(--bg2); border-bottom: 1px solid var(--line); }
+#tabs { display: flex; align-items: flex-end; gap: 3px; height: 36px; padding: 6px 8px 0; overflow: hidden; }
+.tab { flex: 0 1 200px; min-width: 70px; height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 8px 0 10px; border-radius: 9px 9px 0 0; background: transparent; color: var(--dim); font-size: 13px; cursor: pointer; position: relative; }
+.tab:hover { background: #1b1b28; }
+.tab.active { background: var(--bg); color: var(--txt); }
+.tab .ico { width: 15px; height: 15px; flex: none; border-radius: 4px; object-fit: cover; background: var(--bg3); }
+.tab.loading .ico { background: none; border: 2px solid #3b3b55; border-top-color: var(--acc2); border-radius: 50%; animation: sp .7s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.tab .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab .x { flex: none; width: 18px; height: 18px; line-height: 16px; text-align: center; border-radius: 50%; font-size: 14px; opacity: .6; }
+.tab .x:hover { background: #3a3a52; opacity: 1; }
+.tab .aud { font-size: 11px; }
+#plus { flex: none; width: 28px; height: 28px; padding: 0; margin-bottom: 1px; background: none; font-size: 18px; border-radius: 8px; color: var(--dim); }
+#bar { display: flex; align-items: center; gap: 6px; height: 48px; padding: 0 10px; background: var(--bg); }
+.ib { width: 34px; height: 34px; padding: 0; background: none; border-radius: 9px; font-size: 17px; color: #cfcfe2; position: relative; flex: none; }
+.ib:hover { background: var(--bg3); } .ib[disabled] { opacity: .3; pointer-events: none; }
+#omniWrap { flex: 1; position: relative; }
+#omni { height: 36px; border-radius: 18px; padding: 0 16px; background: var(--bg2); font-size: 14px; user-select: text; }
+.badge { position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--grad); font-size: 10px; line-height: 16px; color: #fff; font-weight: 700; }
+#media.hasmedia { background: rgba(139, 92, 246, .25); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(236, 72, 153, .25); } }
+#shield { font-size: 13px; width: auto; padding: 0 9px; gap: 4px; display: flex; align-items: center; }
+#shield.off { opacity: .45; }
+#tvflag { display: none; font-size: 11px; padding: 3px 8px; border-radius: 99px; background: var(--grad); color: #fff; font-weight: 700; flex: none; }
+body.tv #tvflag { display: block; }
+
+#overlay { position: fixed; top: 84px; left: 0; right: 0; bottom: 0; display: none; }
+#overlay.dim { background: rgba(0, 0, 0, .55); }
+.panel { position: absolute; background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); padding: 14px; user-select: text; }
+#sugg { top: -4px; left: 60px; right: 150px; padding: 6px; display: none; }
+.sg { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 14px; }
+.sg.sel, .sg:hover { background: var(--bg3); }
+.sg .k { font-size: 11px; color: var(--dim); flex: none; width: 52px; }
+.sg .a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sg .a small { color: var(--dim); margin-left: 8px; }
+#mediaP { top: 0; right: 120px; width: 440px; max-width: calc(100% - 20px); display: none; }
+#remoteP { top: 6px; left: 50%; transform: translateX(-50%); width: 460px; max-width: calc(100% - 20px); display: none; text-align: center; }
+.mi { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; cursor: pointer; text-align: left; }
+.mi:hover { background: var(--bg3); } .mi b { background: var(--grad); color: #fff; border-radius: 6px; padding: 1px 7px; font-size: 11px; }
+.mi span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+#qrc { background: #fff; border-radius: 14px; padding: 8px; image-rendering: pixelated; width: 280px; height: 280px; }
+#qrUrl { font-size: 12px; word-break: break-all; color: var(--dim); margin: 8px 0; user-select: all; }
+.row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--line); padding: 9px 16px; border-radius: 99px; display: none; }
+</style></head>
+<body>
+<div id="chrome">
+  <div id="tabs"></div>
+  <div id="bar">
+    <button class="ib" id="back" title="Geri (Alt+←)">◀</button>
+    <button class="ib" id="fwd" title="İleri (Alt+→)">▶</button>
+    <button class="ib" id="reload" title="Yenile (F5)">⟳</button>
+    <button class="ib" id="home" title="Ana sayfa">⌂</button>
+    <div id="omniWrap"><input id="omni" type="text" spellcheck="false" autocomplete="off" placeholder="Film ara ya da adres yaz…"></div>
+    <span id="tvflag">TV</span>
+    <button class="ib" id="media" title="Bu sayfadaki videoları Ghost Oynatıcı'da aç" style="display:none">🎬<span class="badge" id="mediaN">0</span></button>
+    <button class="ib" id="shield" title="Reklam engelleyici — ayarlar">🛡 <span id="blk">0</span></button>
+    <button class="ib" id="remoteBtn" title="Telefon kumandası (QR)">📱</button>
+    <button class="ib" id="menu" title="Menü">⋮</button>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="sugg" class="panel"></div>
+  <div id="mediaP" class="panel"></div>
+  <div id="remoteP" class="panel">
+    <h3 style="margin:0 0 4px">📱 Telefonunla kumanda et</h3>
+    <div class="dim" style="font-size:13px;margin-bottom:10px">Telefon ve bu cihaz aynı Wi-Fi'de olmalı. QR'ı kamerayla okut.</div>
+    <canvas id="qrc" width="280" height="280"></canvas>
+    <div id="qrUrl"></div>
+    <div class="row" id="ips"></div>
+    <div class="row"><button id="copyUrl">Bağlantıyı kopyala</button><button id="regen" class="danger">Anahtarı yenile</button><button id="closeRemote" class="primary">Kapat</button></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let tabs = [], activeId = null, remoteInfo = null, ipIdx = 0, mode = null, sel = -1, suggItems = [];
+
+function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', 2200); }
+
+// ---- sekmeler ----
+function renderTabs() {
+  const box = $('#tabs'); box.innerHTML = '';
+  for (const t of tabs) {
+    const el = document.createElement('div'); el.className = 'tab' + (t.active ? ' active' : '') + (t.loading ? ' loading' : '');
+    const ico = document.createElement(t.favicon && !t.loading ? 'img' : 'div'); ico.className = 'ico'; if (t.favicon && !t.loading) { ico.src = t.favicon; ico.onerror = () => { ico.style.visibility = 'hidden'; }; }
+    const title = document.createElement('div'); title.className = 't'; title.textContent = t.title;
+    el.append(ico, title);
+    if (t.audible) { const a = document.createElement('span'); a.className = 'aud'; a.textContent = '🔊'; el.append(a); }
+    const x = document.createElement('div'); x.className = 'x'; x.textContent = '×'; x.onclick = (e) => { e.stopPropagation(); ui.send('close', t.id); };
+    el.append(x);
+    el.onclick = () => ui.send('activate', t.id);
+    el.onauxclick = (e) => { if (e.button === 1) ui.send('close', t.id); };
+    box.append(el);
+  }
+  const p = document.createElement('button'); p.id = 'plus'; p.textContent = '+'; p.title = 'Yeni sekme (Ctrl+T)'; p.onclick = () => ui.send('newtab'); box.append(p);
+  const a = tabs.find(t => t.active);
+  if (a) {
+    $('#back').disabled = !a.canBack; $('#fwd').disabled = !a.canForward;
+    $('#reload').textContent = a.loading ? '✕' : '⟳';
+    if (document.activeElement !== $('#omni')) $('#omni').value = a.url;
+    $('#media').style.display = a.media ? '' : 'none'; $('#media').classList.toggle('hasmedia', a.media > 0); $('#mediaN').textContent = a.media;
+  }
+}
+ui.on('tabs', (d) => { tabs = d.tabs; activeId = d.active; renderTabs(); });
+ui.on('stats', (s) => { $('#blk').textContent = s.blocked + (s.popups ? ' · ' + s.popups + '⧉' : ''); $('#shield').classList.toggle('off', !s.enabled); });
+ui.on('settings', (s) => { document.body.classList.toggle('tv', !!s.tvMode); });
+ui.on('focus-omnibox', () => { $('#omni').focus(); $('#omni').select(); });
+ui.on('remote', (r) => { remoteInfo = r; if (mode === 'remote') drawRemote(); });
+ui.on('show-remote', () => openPanel('remote'));
+
+// ---- overlay yönetimi ----
+function openPanel(m) {
+  mode = m; ui.send('overlay', true);
+  $('#overlay').style.display = 'block'; $('#overlay').classList.toggle('dim', m !== 'sugg');
+  $('#sugg').style.display = m === 'sugg' ? 'block' : 'none';
+  $('#mediaP').style.display = m === 'media' ? 'block' : 'none';
+  $('#remoteP').style.display = m === 'remote' ? 'block' : 'none';
+}
+function closePanel() { if (!mode) return; mode = null; $('#overlay').style.display = 'none'; ui.send('overlay', false); sel = -1; }
+$('#overlay').addEventListener('mousedown', (e) => { if (e.target === $('#overlay')) closePanel(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closePanel(); $('#omni').blur(); } });
+
+// ---- omnibox ----
+const omni = $('#omni'); let st;
+omni.addEventListener('focus', () => { setTimeout(() => omni.select(), 0); runSuggest(); });
+omni.addEventListener('input', () => { clearTimeout(st); st = setTimeout(runSuggest, 70); });
+omni.addEventListener('blur', () => setTimeout(() => { if (mode === 'sugg') closePanel(); }, 150));
+async function runSuggest() {
+  const q = omni.value.trim(); const a = tabs.find(t => t.active);
+  suggItems = await ui.invoke('suggest', q === (a && a.url) ? '' : q); sel = -1;
+  const box = $('#sugg'); box.innerHTML = '';
+  if (q) { suggItems.unshift({ type: 'search', title: q, url: q }); }
+  if (!suggItems.length) { if (mode === 'sugg') closePanel(); return; }
+  suggItems.forEach((s, i) => {
+    const d = document.createElement('div'); d.className = 'sg';
+    d.innerHTML = '<span class="k"></span><span class="a"></span>';
+    d.firstChild.textContent = { site: '⭐ Site', history: '🕘 Geçmiş', search: '🔍 Ara' }[s.type];
+    d.lastChild.textContent = s.title; if (s.type !== 'search') { const sm = document.createElement('small'); sm.textContent = s.url.replace(/^https?:\/\//, '').slice(0, 60); d.lastChild.append(sm); }
+    d.onmousedown = (e) => { e.preventDefault(); go(s.url, e.altKey); }; box.append(d);
+  });
+  if (mode !== 'sugg') openPanel('sugg');
+}
+function go(text, nt) { closePanel(); omni.blur(); ui.send('go', text, !!nt); }
+omni.addEventListener('keydown', (e) => {
+  const rows = [...document.querySelectorAll('.sg')];
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + rows.length + 1) % (rows.length + 1) - 0; if (sel >= rows.length) sel = -1; rows.forEach((r, i) => r.classList.toggle('sel', i === sel)); if (sel >= 0) omni.value = suggItems[sel].type === 'search' ? suggItems[sel].title : suggItems[sel].url; }
+  else if (e.key === 'Enter') { e.preventDefault(); go(omni.value, e.altKey); }
+});
+
+// ---- düğmeler ----
+$('#back').onclick = () => ui.send('back'); $('#fwd').onclick = () => ui.send('forward');
+$('#reload').onclick = () => ui.send('reload'); $('#home').onclick = () => ui.send('home');
+$('#menu').onclick = () => ui.send('menu'); $('#shield').onclick = () => ui.send('settings', 'adblock');
+$('#remoteBtn').onclick = () => openPanel('remote');
+$('#closeRemote').onclick = closePanel;
+$('#media').onclick = async () => {
+  const list = await ui.invoke('media'); const p = $('#mediaP');
+  p.innerHTML = '<h3 style="margin:0 0 8px">🎬 Algılanan videolar</h3>' + (list.length ? '' : '<div class="dim">Henüz video bulunamadı. Sayfada oynat tuşuna bas.</div>');
+  list.forEach((m, i) => {
+    const d = document.createElement('div'); d.className = 'mi';
+    let name = m.url; try { const u = new URL(m.url); name = u.hostname + u.pathname.slice(-38); } catch {}
+    d.innerHTML = '<b></b><span></span>'; d.firstChild.textContent = m.kind; d.lastChild.textContent = name + (m.size ? '  ·  ' + (m.size / 1048576).toFixed(1) + ' MB' : '');
+    d.onclick = () => { closePanel(); ui.send('open-media', i); }; p.append(d);
+  });
+  openPanel('media');
+};
+
+// ---- QR ----
+function drawRemote() {
+  const info = remoteInfo, urlEl = $('#qrUrl'), ips = $('#ips'); ips.innerHTML = '';
+  if (!info || !info.enabled || !info.urls.length) { urlEl.textContent = 'Kumanda kapalı ya da ağ bulunamadı. Ayarlar → Kumanda.'; const c = $('#qrc').getContext('2d'); c.clearRect(0, 0, 280, 280); return; }
+  ipIdx = Math.min(ipIdx, info.urls.length - 1);
+  const u = info.urls[ipIdx], rows = u.qr, n = rows.length + 8, c = $('#qrc'), g = c.getContext('2d'), s = Math.floor(264 / n * 100) / 100;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 280, 280); g.fillStyle = '#000';
+  const off = (280 - n * s) / 2;
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === '1') g.fillRect(Math.round(off + (x + 4) * s), Math.round(off + (y + 4) * s), Math.ceil(s), Math.ceil(s)); }));
+  urlEl.textContent = u.url;
+  info.urls.forEach((x, i) => { if (info.urls.length < 2) return; const b = document.createElement('button'); b.textContent = x.ip + (i === ipIdx ? ' ✓' : ''); b.onclick = () => { ipIdx = i; drawRemote(); }; ips.append(b); });
+}
+$('#copyUrl').onclick = () => { const u = remoteInfo && remoteInfo.urls[ipIdx]; if (u) { navigator.clipboard.writeText(u.url).then(() => toast('Kopyalandı'), () => toast(u.url)); } };
+$('#regen').onclick = async () => { remoteInfo = await ui.invoke('regen-token'); drawRemote(); toast('Yeni anahtar üretildi — eski telefonlar bağlantıyı kaybetti'); };
+const _open = openPanel; openPanel = function (m) { _open(m); if (m === 'remote') { ui.invoke('remote').then(r => { remoteInfo = r; drawRemote(); }); } };
+
+ui.invoke('init').then((d) => { tabs = d.tabs; activeId = d.active; remoteInfo = d.remote; document.body.classList.toggle('tv', !!d.settings.tvMode); renderTabs(); $('#blk').textContent = d.stats.blocked; });
+</script></body></html>

@@ -1,0 +1,15 @@
+{
+  "name": "Varsayılan (yedek) liste",
+  "sites": [
+    { "name": "YouTube Filmler", "url": "https://www.youtube.com/feed/storefront", "category": "Yasal / Ücretsiz" },
+    { "name": "Internet Archive Filmler", "url": "https://archive.org/details/movies", "category": "Yasal / Ücretsiz" },
+    { "name": "Tubi", "url": "https://tubitv.com", "category": "Yasal / Ücretsiz" },
+    { "name": "Pluto TV", "url": "https://pluto.tv", "category": "Yasal / Ücretsiz" },
+    { "name": "Plex Ücretsiz", "url": "https://watch.plex.tv", "category": "Yasal / Ücretsiz" },
+    { "name": "IMDb", "url": "https://www.imdb.com", "category": "Rehber" },
+    { "name": "TMDB", "url": "https://www.themoviedb.org", "category": "Rehber" },
+    { "name": "Letterboxd", "url": "https://letterboxd.com", "category": "Rehber" },
+    { "name": "JustWatch", "url": "https://www.justwatch.com/tr", "category": "Rehber" },
+    { "name": "Sinemalar", "url": "https://sinemalar.com", "category": "Rehber" }
+  ]
+}

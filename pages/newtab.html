@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Yeni sekme</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="ghost://static/shared.css">
+<style>
+body { overflow-y: auto; background: radial-gradient(1200px 600px at 50% -10%, #2a1a4a 0%, transparent 60%), radial-gradient(900px 500px at 90% 10%, #3a1230 0%, transparent 55%), var(--bg); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 4vh 24px 60px; }
+.logo { text-align: center; font-size: 46px; font-weight: 800; letter-spacing: -1px; margin: 2vh 0 4px; }
+.logo span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { text-align: center; color: var(--dim); margin-bottom: 22px; }
+.search { display: flex; max-width: 680px; margin: 0 auto 26px; }
+.search input { height: 54px; border-radius: 27px; padding: 0 24px; font-size: 17px; background: rgba(20, 20, 29, .9); }
+.cats { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+.cats button { border-radius: 99px; padding: 6px 15px; font-size: 13px; background: var(--bg2); color: var(--dim); border: 1px solid var(--line); }
+.cats button.on { background: var(--grad); color: #fff; border-color: transparent; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 10px 14px; background: rgba(20, 20, 29, .85); border: 1px solid var(--line); border-radius: 18px; text-decoration: none; color: var(--txt); transition: transform .12s, border-color .12s, background .12s; position: relative; }
+.tile:hover, .tile:focus-visible { transform: translateY(-3px) scale(1.03); border-color: var(--acc); background: #1c1c2b; outline: none; box-shadow: 0 10px 30px rgba(139, 92, 246, .25); }
+.av { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: #fff; overflow: hidden; }
+.av img { width: 100%; height: 100%; object-fit: cover; }
+.tile b { font-size: 14px; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile small { color: var(--dim); font-size: 11px; margin-top: -6px; }
+.tile .src { position: absolute; top: 8px; right: 10px; font-size: 10px; opacity: .5; }
+h2 { font-size: 15px; color: var(--dim); font-weight: 600; margin: 34px 0 12px; text-transform: uppercase; letter-spacing: .08em; }
+.recent { display: flex; flex-wrap: wrap; gap: 8px; }
+.recent a { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 13px; font-size: 13px; text-decoration: none; color: var(--txt); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent a:hover, .recent a:focus-visible { border-color: var(--acc); outline: none; }
+.foot { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 36px; color: var(--dim); font-size: 13px; }
+.remote { display: none; gap: 18px; align-items: center; background: rgba(20, 20, 29, .85); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-top: 30px; }
+.remote canvas { background: #fff; border-radius: 10px; padding: 5px; width: 150px; height: 150px; flex: none; image-rendering: pixelated; }
+.remote h3 { margin: 0 0 4px; } .remote p { margin: 0; color: var(--dim); font-size: 13px; }
+.empty { text-align: center; padding: 40px 10px; color: var(--dim); grid-column: 1/-1; }
+</style></head>
+<body data-spatial>
+<div class="wrap">
+  <div class="logo">👻 <span>Ghost</span></div>
+  <div class="sub">Film &amp; dizi izlemek için hazır. Reklamsız, hızlı, kumandalı.</div>
+  <form class="search" id="sf"><input id="q" type="text" autofocus autocomplete="off" placeholder="Film, dizi ya da adres ara…"></form>
+  <div class="cats" id="cats"></div>
+  <div class="grid" id="grid"></div>
+  <div id="recentBox"><h2>Son ziyaretler</h2><div class="recent" id="recent"></div></div>
+  <div class="remote" id="remoteCard"><canvas id="qr" width="150" height="150"></canvas><div><h3>📱 Telefon kumandası</h3><p>QR'ı telefonunla okut: link gönder, film ara, imleci hareket ettir, oynatıcıyı yönet.</p><p id="rurl" style="margin-top:6px;word-break:break-all"></p></div></div>
+  <div class="foot"><span id="status"></span><span><button id="refresh">↻ Listeyi yenile</button> <button id="cfg">⚙ Ayarlar</button></span></div>
+</div>
+<script src="ghost://static/spatial.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+let data = null, cat = 'Tümü';
+try { data = JSON.parse(localStorage.getItem('nt') || 'null'); } catch {}
+const colors = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6', '#a855f7'];
+const hue = (s) => colors[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
+
+function render() {
+  if (!data) return;
+  const sites = data.sites || [], cats = ['Tümü', ...new Set(sites.map(s => s.category).filter(Boolean))];
+  const cbox = $('#cats'); cbox.innerHTML = '';
+  if (cats.length > 2) cats.forEach(c => { const b = document.createElement('button'); b.textContent = c; b.className = c === cat ? 'on' : ''; b.onclick = () => { cat = c; render(); }; cbox.append(b); });
+  const g = $('#grid'); g.innerHTML = '';
+  const shown = sites.filter(s => cat === 'Tümü' || s.category === cat);
+  shown.forEach(s => {
+    const a = document.createElement('a'); a.className = 'tile'; a.href = s.url; a.title = s.description || s.url;
+    const av = document.createElement('div'); av.className = 'av'; av.style.background = hue(s.name);
+    if (s.icon) { const im = new Image(); im.src = s.icon; im.onerror = () => { im.remove(); av.textContent = s.name[0].toUpperCase(); }; av.append(im); } else av.textContent = s.name[0].toUpperCase();
+    const b = document.createElement('b'); b.textContent = s.name; a.append(av, b);
+    if (s.category && cat === 'Tümü') { const sm = document.createElement('small'); sm.textContent = s.category; a.append(sm); }
+    if (s.src === 'github') { const t = document.createElement('span'); t.className = 'src'; t.textContent = '●'; t.title = 'GitHub listesinden'; a.append(t); }
+    g.append(a);
+  });
+  if (!shown.length) g.innerHTML = '<div class="empty">Henüz site yok.<br>Ayarlar → Siteler bölümünden GitHub JSON bağlantısı ekle.</div>';
+  const rec = $('#recent'); rec.innerHTML = '';
+  const seen = new Set(); [...(data.recent || []), ...(data.top || [])].forEach(h => { if (seen.has(h.url) || seen.size >= 12) return; seen.add(h.url); const a = document.createElement('a'); a.href = h.url; a.textContent = h.title || h.url; a.title = h.url; rec.append(a); });
+  $('#recentBox').style.display = seen.size ? '' : 'none';
+  const src = data.sources || [], ok = src.filter(s => s.ok), bad = src.filter(s => s.ok === false);
+  $('#status').textContent = !src.length ? 'GitHub kaynağı yok — yedek liste gösteriliyor.' : ok.length ? `GitHub: ${ok.reduce((a, s) => a + s.count, 0)} site yüklendi` + (bad.length ? ` · ${bad.length} kaynak hata verdi` : '') : bad.length ? 'GitHub listesi alınamadı: ' + bad[0].error + (bad[0].cached ? ' (önbellek)' : '') : 'Liste yükleniyor…';
+  try { localStorage.setItem('nt', JSON.stringify(data)); } catch {}
+}
+async function load() { data = await ghost.invoke('newtab'); render(); drawRemote(); }
+async function drawRemote() {
+  const r = await ghost.invoke('remote'); const card = $('#remoteCard');
+  if (!r.enabled || !r.urls.length) { card.style.display = 'none'; return; }
+  card.style.display = 'flex'; const rows = r.urls[0].qr, n = rows.length + 8, c = $('#qr'), g = c.getContext('2d'), s = 140 / n;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 150, 150); g.fillStyle = '#000';
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '1') g.fillRect(Math.round(5 + (x + 4) * s), Math.round(5 + (y + 4) * s), Math.ceil(s), Math.ceil(s)); }));
+  $('#rurl').textContent = r.urls[0].url.replace(/\?t=.*/, '') + '  (anahtar QR içinde)';
+}
+$('#sf').onsubmit = (e) => { e.preventDefault(); const v = $('#q').value.trim(); if (v) ghost.invoke('open', v); };
+$('#refresh').onclick = async () => { $('#status').textContent = 'Yenileniyor…'; const r = await ghost.invoke('sites-refresh'); await load(); };
+$('#cfg').onclick = () => ghost.invoke('open', 'ghost://settings');
+ghost.on('sites-updated', load); ghost.on('remote-updated', drawRemote);
+render(); load();
+</script></body></html>

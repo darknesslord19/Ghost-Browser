@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b10"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>Ghost Kumanda</title>
+<style>
+:root { --bg:#0b0b10; --bg2:#14141d; --bg3:#1f1f2e; --line:#2a2a3b; --txt:#ececf4; --dim:#9a9ab2; --acc:#8b5cf6; --acc2:#ec4899; --grad:linear-gradient(135deg,#8b5cf6,#ec4899); }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+html,body { margin:0; background:var(--bg); color:var(--txt); font:16px/1.4 system-ui,-apple-system,Roboto,sans-serif; -webkit-user-select:none; user-select:none; overscroll-behavior:none; }
+body { padding:env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 24px); max-width:560px; margin:0 auto; }
+header { display:flex; align-items:center; gap:10px; padding:12px 2px; position:sticky; top:0; background:var(--bg); z-index:5; }
+#dot { width:10px; height:10px; border-radius:50%; background:#f43f5e; flex:none; } #dot.on { background:#34d399; box-shadow:0 0 8px #34d399; }
+#ttl { flex:1; min-width:0; } #ttl b { display:block; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } #ttl small { color:var(--dim); font-size:11px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.blk { font-size:12px; color:var(--dim); flex:none; }
+.card { background:var(--bg2); border:1px solid var(--line); border-radius:18px; padding:12px; margin-bottom:12px; }
+button { font:inherit; color:inherit; border:0; background:var(--bg3); border-radius:14px; min-height:48px; padding:0 14px; transition:transform .08s,background .1s; }
+button:active { transform:scale(.94); background:#2d2d44; }
+button.p { background:var(--grad); color:#fff; font-weight:700; }
+input[type=text],input[type=search] { width:100%; height:50px; border-radius:25px; border:1px solid var(--line); background:var(--bg); color:var(--txt); font:inherit; padding:0 18px; outline:none; -webkit-user-select:text; user-select:text; }
+input:focus { border-color:var(--acc); }
+.row { display:flex; gap:8px; margin-top:8px; } .row>* { flex:1; }
+.tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px; scrollbar-width:none; }
+.tabs button { flex:none; min-height:38px; font-size:13px; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:99px; }
+.tabs button.act { background:var(--grad); color:#fff; }
+.seg { display:flex; background:var(--bg); border-radius:14px; padding:4px; margin-bottom:10px; } .seg button { flex:1; background:none; min-height:40px; } .seg button.on { background:var(--bg3); color:#fff; font-weight:700; }
+#pad { position:relative; height:250px; border-radius:20px; background:radial-gradient(circle at 50% 40%,#1c1c2c,#10101a); border:1px solid var(--line); touch-action:none; display:none; overflow:hidden; }
+#pad::after { content:"Parmağını kaydır = imleç · dokun = tıkla · iki parmak = kaydır"; position:absolute; left:0; right:0; bottom:10px; text-align:center; font-size:11px; color:#6a6a85; pointer-events:none; }
+#dpad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:300px; margin:0 auto; }
+#dpad button { min-height:70px; font-size:26px; border-radius:20px; } #dpad .ok { background:var(--grad); font-weight:800; font-size:18px; } #dpad .e { visibility:hidden; }
+.grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px; } .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+.grid4 button,.grid3 button { font-size:22px; min-height:56px; padding:0; } .grid4 button small,.grid3 button small { display:block; font-size:10px; color:var(--dim); margin-top:-2px; }
+#mini { height:8px; background:var(--bg); border-radius:4px; margin:10px 0 2px; overflow:hidden; } #mini i { display:block; height:100%; width:0; background:var(--grad); }
+#mt { font-size:12px; color:var(--dim); display:flex; justify-content:space-between; }
+.sites { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; } .sites button { min-height:46px; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; padding:0 12px; }
+h4 { margin:2px 0 10px; font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.08em; }
+#toast { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 18px); transform:translateX(-50%); background:#000d; padding:10px 18px; border-radius:99px; font-size:14px; opacity:0; transition:opacity .25s; pointer-events:none; z-index:9; } #toast.s { opacity:1; }
+</style></head>
+<body>
+<header><div id="dot"></div><div id="ttl"><b id="tt">Bağlanıyor…</b><small id="tu"></small></div><span class="blk" id="blk">🛡 0</span></header>
+
+<div class="card">
+  <input id="q" type="search" enterkeyhint="go" placeholder="Link yapıştır veya film ara…" autocomplete="off" autocapitalize="off">
+  <div class="row"><button id="paste">📋 Yapıştır</button><button class="p" id="go">Aç</button><button id="goNew">Yeni sekme</button></div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="card">
+  <div class="grid4" style="margin-top:0">
+    <button data-nav="back">◀<small>Geri</small></button><button data-nav="forward">▶<small>İleri</small></button>
+    <button data-nav="reload">⟳<small>Yenile</small></button><button data-nav="home">⌂<small>Ana sayfa</small></button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="seg"><button id="mKeys" class="on">Oklar</button><button id="mPad">İmleç / Touchpad</button></div>
+  <div id="dpad">
+    <span class="e"></span><button data-key="Up" data-rep>▲</button><span class="e"></span>
+    <button data-key="Left" data-rep>◀</button><button class="ok" data-key="Enter">OK</button><button data-key="Right" data-rep>▶</button>
+    <button data-key="Esc">Esc</button><button data-key="Down" data-rep>▼</button><button data-key="Backspace" data-rep>⌫</button>
+  </div>
+  <div id="pad"></div>
+  <div class="grid3" id="padBtns" style="display:none"><button id="bClick">🖱<small>Tıkla</small></button><button data-scroll="-220" data-rep>⬆<small>Yukarı kaydır</small></button><button data-scroll="220" data-rep>⬇<small>Aşağı kaydır</small></button></div>
+</div>
+
+<div class="card">
+  <h4>Oynatma</h4>
+  <div id="mini"><i id="mi"></i></div><div id="mt"><span id="mt1">—</span><span id="mt2"></span></div>
+  <div class="grid4">
+    <button data-m="seek" data-a="-30" data-rep>⏪<small>30 sn</small></button><button data-m="seek" data-a="-10" data-rep>◁<small>10 sn</small></button>
+    <button data-m="toggle" class="p" id="bPlay">⏯<small>Oynat</small></button><button data-m="seek" data-a="10" data-rep>▷<small>10 sn</small></button>
+  </div>
+  <div class="grid4">
+    <button data-m="vol" data-a="-0.08" data-rep>🔉<small>Ses −</small></button><button data-m="mute">🔇<small>Sessiz</small></button>
+    <button data-m="vol" data-a="0.08" data-rep>🔊<small>Ses +</small></button><button data-m="seek" data-a="90">⏩<small>90 sn</small></button>
+  </div>
+  <div class="grid4">
+    <button data-m="fs">⛶<small>Tam ekran</small></button><button data-m="subs">💬<small>Altyazı</small></button>
+    <button data-m="speed" id="bSpeed">1x<small>Hız</small></button><button id="bPlayer" style="display:none">🎬<small id="bpn">Oynatıcı</small></button>
+  </div>
+</div>
+
+<div class="card">
+  <h4>Yazı gönder (arama kutusu / form)</h4>
+  <input id="txt" type="text" placeholder="Seçili kutuya yaz…" autocomplete="off">
+  <div class="row"><button class="p" id="sendTxt">Gönder</button><button data-key="Backspace" data-rep>⌫</button><button data-key="Enter">Enter</button></div>
+</div>
+
+<div class="card"><h4>Sitelerim</h4><div class="sites" id="sites"></div></div>
+<div class="card"><div class="row" style="margin:0"><button data-z="-0.5">A−</button><button data-z="0">100%</button><button data-z="0.5">A+</button><button id="fsWin">🖥 Pencere tam ekran</button></div></div>
+<div id="toast"></div>
+
+<script>
+const T = new URLSearchParams(location.search).get('t') || sessionStorage.getItem('gt') || ''; sessionStorage.setItem('gt', T);
+const $ = (s) => document.querySelector(s), Q = (s) => [...document.querySelectorAll(s)];
+const vib = (n = 8) => { try { navigator.vibrate && navigator.vibrate(n); } catch {} };
+function toast(m) { const e = $('#toast'); e.textContent = m; e.classList.add('s'); clearTimeout(toast._t); toast._t = setTimeout(() => e.classList.remove('s'), 1600); }
+async function send(c) {
+  try { const r = await fetch('/cmd?t=' + T, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(c) }); const j = await r.json(); if (!j.ok) toast(j.error || 'Hata'); return j; }
+  catch { toast('Bağlantı yok'); }
+}
+const fmt = (t) => { t = Math.floor(t || 0); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
+
+// ---- durum akışı ----
+let es, S = {};
+function connect() {
+  es = new EventSource('/events?t=' + T);
+  es.onopen = () => $('#dot').classList.add('on');
+  es.onerror = () => { $('#dot').classList.remove('on'); };
+  es.addEventListener('state', (e) => { S = JSON.parse(e.data); render(); });
+  es.addEventListener('sites', (e) => renderSites(JSON.parse(e.data)));
+}
+function render() {
+  $('#tt').textContent = S.title || 'Ghost Browser'; $('#tu').textContent = S.url || ''; $('#blk').textContent = '🛡 ' + (S.blocked || 0);
+  const tb = $('#tabs'); tb.innerHTML = '';
+  (S.tabs || []).forEach(t => { const b = document.createElement('button'); b.textContent = t.title || 'Sekme'; if (t.active) b.className = 'act'; b.onclick = () => { vib(); send({ type: 'tab', action: 'activate', id: t.id }); }; let lp; b.ontouchstart = () => { lp = setTimeout(() => { if (confirm('Sekme kapatılsın mı?')) send({ type: 'tab', action: 'close', id: t.id }); }, 700); }; b.ontouchend = () => clearTimeout(lp); tb.append(b); });
+  const p = document.createElement('button'); p.textContent = '＋'; p.onclick = () => send({ type: 'tab', action: 'new' }); tb.append(p);
+  const m = S.media;
+  $('#mi').style.width = m && m.d ? (m.t / m.d * 100) + '%' : '0'; $('#mt1').textContent = m ? fmt(m.t) + ' / ' + fmt(m.d) : 'Video yok'; $('#mt2').textContent = m ? Math.round((m.muted ? 0 : m.vol) * 100) + '% ses' : '';
+  $('#bPlay').firstChild.textContent = m && m.playing ? '⏸' : '⏯'; $('#bSpeed').firstChild.textContent = (m ? m.rate : 1) + 'x';
+  const bp = $('#bPlayer'); bp.style.display = S.mediaCount && !S.isPlayer ? '' : 'none'; $('#bpn').textContent = 'Oynatıcıda aç (' + S.mediaCount + ')';
+}
+function renderSites(list) {
+  const box = $('#sites'); box.innerHTML = '';
+  list.forEach(s => { const b = document.createElement('button'); b.textContent = s.name; b.title = s.url; b.onclick = () => { vib(); send({ type: 'open', value: s.url }); toast(s.name + ' açılıyor'); }; box.append(b); });
+}
+
+// ---- giriş ----
+function openQ(nt) { const v = $('#q').value.trim(); if (!v) return; vib(); send({ type: 'open', value: v, newTab: nt }); $('#q').blur(); toast('Gönderildi'); }
+$('#go').onclick = () => openQ(false); $('#goNew').onclick = () => openQ(true);
+$('#q').addEventListener('keydown', (e) => { if (e.key === 'Enter') openQ(false); });
+$('#paste').onclick = async () => { try { const t = await navigator.clipboard.readText(); $('#q').value = t; if (/^https?:\/\//i.test(t.trim())) openQ(false); } catch { $('#q').focus(); toast('Uzun bas → Yapıştır'); } };
+$('#sendTxt').onclick = () => { const v = $('#txt').value; if (v) { send({ type: 'text', value: v }); $('#txt').value = ''; vib(); } };
+$('#txt').addEventListener('keydown', (e) => { if (e.key === 'Enter') { $('#sendTxt').click(); send({ type: 'key', key: 'Enter' }); } });
+
+// basılı tutunca tekrar eden düğmeler
+function bind(btn, fn) {
+  let t, iv;
+  const stop = () => { clearTimeout(t); clearInterval(iv); };
+  btn.addEventListener('pointerdown', (e) => { e.preventDefault(); vib(); fn(); if (btn.hasAttribute('data-rep')) { t = setTimeout(() => { iv = setInterval(fn, 110); }, 380); } });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, stop));
+}
+Q('[data-nav]').forEach(b => b.onclick = () => { vib(); send({ type: 'nav', action: b.dataset.nav }); });
+Q('[data-key]').forEach(b => bind(b, () => send({ type: 'key', key: b.dataset.key })));
+Q('[data-scroll]').forEach(b => bind(b, () => send({ type: 'scroll', dy: +b.dataset.scroll })));
+Q('[data-m]').forEach(b => bind(b, () => send({ type: 'media', cmd: b.dataset.m, arg: b.dataset.a !== undefined ? +b.dataset.a : null }).then(j => { if (j && j.media) { S.media = j.media; render(); } })));
+Q('[data-z]').forEach(b => b.onclick = () => send({ type: 'zoom', delta: +b.dataset.z, reset: b.dataset.z === '0' }));
+$('#bPlayer').onclick = () => { vib(); send({ type: 'player', index: 0 }); };
+$('#fsWin').onclick = () => send({ type: 'fullscreen' });
+$('#bClick').onclick = () => { vib(15); send({ type: 'click' }); };
+
+// mod değiştirme
+function mode(pad) { $('#mKeys').classList.toggle('on', !pad); $('#mPad').classList.toggle('on', pad); $('#dpad').style.display = pad ? 'none' : 'grid'; $('#pad').style.display = pad ? 'block' : 'none'; $('#padBtns').style.display = pad ? 'grid' : 'none'; localStorage.setItem('gm', pad ? 'pad' : 'keys'); }
+$('#mKeys').onclick = () => mode(false); $('#mPad').onclick = () => mode(true); mode(localStorage.getItem('gm') === 'pad');
+
+// touchpad: kaydır = imleç, dokun = tıkla, iki parmak = kaydırma
+(() => {
+  const pad = $('#pad'); const ptrs = new Map(); let acc = { x: 0, y: 0 }, sc = 0, t0 = 0, moved = 0, maxP = 0, timer;
+  const flush = () => { if (acc.x || acc.y) { send({ type: 'move', dx: Math.round(acc.x), dy: Math.round(acc.y) }); acc = { x: 0, y: 0 }; } if (sc) { send({ type: 'scroll', dy: Math.round(sc) }); sc = 0; } };
+  pad.addEventListener('pointerdown', (e) => { pad.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size === 1) { t0 = Date.now(); moved = 0; maxP = 1; } maxP = Math.max(maxP, ptrs.size); clearInterval(timer); timer = setInterval(flush, 40); });
+  pad.addEventListener('pointermove', (e) => {
+    const p = ptrs.get(e.pointerId); if (!p) return; const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+    if (ptrs.size >= 2) sc += -dy * 3; else { const k = 1.6 + Math.min(2.2, Math.hypot(dx, dy) / 8); acc.x += dx * k; acc.y += dy * k; }
+  });
+  const up = (e) => { if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); if (!ptrs.size) { clearInterval(timer); flush(); if (Date.now() - t0 < 260 && moved < 10 && maxP === 1) { vib(15); send({ type: 'click' }); } } };
+  pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
+})();
+
+if (!T) { $('#tt').textContent = 'Anahtar yok — QR’ı yeniden tara'; } else connect();
+document.addEventListener('visibilitychange', () => { if (!document.hidden && es && es.readyState === 2) connect(); });
+</script></body></html>

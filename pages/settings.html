@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>Ayarlar</title>
+<link rel="stylesheet" href="ghost://static/shared.css">
+<style>
+body { display: flex; height: 100vh; }
+nav { width: 210px; flex: none; background: var(--bg2); border-right: 1px solid var(--line); padding: 18px 10px; }
+nav h1 { font-size: 18px; margin: 0 8px 16px; } nav h1 span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+nav a { display: block; padding: 10px 14px; border-radius: 10px; color: var(--dim); text-decoration: none; margin-bottom: 3px; }
+nav a.on, nav a:hover { background: var(--bg3); color: var(--txt); }
+main { flex: 1; overflow-y: auto; padding: 28px 40px 80px; }
+section { display: none; max-width: 760px; } section.on { display: block; }
+h2 { margin: 0 0 18px; } h3 { margin: 26px 0 8px; font-size: 15px; }
+.card { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+.row { display: flex; gap: 10px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.row > label { flex: 1; min-width: 200px; } .row small { display: block; color: var(--dim); }
+.sw { position: relative; width: 46px; height: 26px; flex: none; }
+.sw input { opacity: 0; width: 100%; height: 100%; position: absolute; inset: 0; margin: 0; cursor: pointer; z-index: 2; }
+.sw i { position: absolute; inset: 0; background: #34344a; border-radius: 13px; transition: .15s; }
+.sw i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: .15s; }
+.sw input:checked + i { background: var(--acc); } .sw input:checked + i::after { left: 23px; }
+.sw input:focus-visible + i { outline: 3px solid var(--acc2); }
+.src { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.src:last-child { border: 0; } .src .u { flex: 1; min-width: 0; word-break: break-all; font-size: 13px; }
+.ok { color: var(--ok); } .err { color: var(--bad); }
+pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; font-size: 12.5px; user-select: text; }
+.hist { display: flex; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); align-items: center; }
+.hist a { flex: 1; min-width: 0; text-decoration: none; color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist a small { color: var(--dim); margin-left: 8px; } .hist time { color: var(--dim); font-size: 12px; flex: none; }
+#qr { background: #fff; border-radius: 12px; padding: 6px; width: 220px; height: 220px; image-rendering: pixelated; }
+textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 13px; }
+.stat { display: inline-block; margin-right: 24px; } .stat b { font-size: 26px; display: block; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#msg { position: fixed; right: 20px; bottom: 20px; background: var(--bg3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; display: none; }
+</style></head>
+<body data-spatial>
+<nav>
+  <h1>👻 <span>Ayarlar</span></h1>
+  <a href="#genel">⚙ Genel</a><a href="#siteler">🎞 Siteler (GitHub)</a><a href="#adblock">🛡 Reklam engelleme</a>
+  <a href="#remote">📱 Telefon kumandası</a><a href="#history">🕘 Geçmiş</a><a href="#about">ℹ Hakkında</a>
+</nav>
+<main>
+<section id="genel"><h2>Genel</h2>
+  <div class="card">
+    <div class="row"><label>Arama motoru<small>Adres çubuğuna yazılan aramalar</small></label>
+      <select id="searchEngine" style="max-width:260px"><option value="https://www.google.com/search?q=%s">Google</option><option value="https://duckduckgo.com/?q=%s">DuckDuckGo</option><option value="https://www.bing.com/search?q=%s">Bing</option><option value="https://yandex.com.tr/search/?text=%s">Yandex</option></select></div>
+    <div class="row"><label>Ana sayfa<small>Ev düğmesi ve yeni pencere</small></label><input id="homepage" type="text" style="max-width:260px"></div>
+    <div class="row"><label>TV modu<small>Büyük arayüz + yön tuşlarıyla sanal imleç (F9 ile de açılır). Uzaktan kumanda / klavye ile kullanım için.</small></label><span class="sw"><input type="checkbox" id="tvMode"><i></i></span></div>
+    <div class="row"><label>İmleç hızı<small>TV modu ve telefon touchpad'i</small></label><input id="cursorSpeed" type="number" min="0.3" max="4" step="0.1" style="max-width:100px"></div>
+  </div>
+  <h3>Kısayollar</h3>
+  <div class="card dim" style="line-height:1.9">Ctrl+T yeni sekme · Ctrl+W kapat · Ctrl+Shift+T geri aç · Ctrl+L adres çubuğu · Ctrl+Tab sekme değiştir · F11 tam ekran · F9 TV modu · F12 geliştirici araçları · Alt+Enter (adres çubuğu) yeni sekmede aç<br>Oynatıcı: Boşluk oynat/duraklat · ←/→ 10 sn · ↑/↓ ses · F tam ekran · C altyazı · [ ] hız · M sessiz</div>
+</section>
+
+<section id="siteler"><h2>Siteler (GitHub kontrollü)</h2>
+  <div class="card">
+    <div class="dim" style="margin-bottom:10px">Yeni sekmedeki site kutuları bir GitHub JSON dosyasından gelir. Depo linki, <code>blob</code> dosya linki, <code>raw</code> link veya gist yapıştırabilirsin. Depo linkinde kökteki <code>sites.json</code> okunur.</div>
+    <div class="row"><input id="srcUrl" type="url" placeholder="https://github.com/kullanici/depo  veya  .../blob/main/sites.json" style="flex:1"><button class="primary" id="srcAdd">Ekle</button></div>
+    <div id="srcList"></div>
+    <div class="row"><button id="srcRefresh">↻ Şimdi yenile</button><span class="dim" id="srcMsg"></span></div>
+  </div>
+  <h3>Kendi sitelerim (yerel)</h3>
+  <div class="card"><div class="row"><input id="lName" type="text" placeholder="Ad" style="flex:1"><input id="lUrl" type="text" placeholder="adres.com" style="flex:2"><input id="lCat" type="text" placeholder="Kategori (ops.)" style="flex:1"><button id="lAdd">Ekle</button></div><div id="localList"></div></div>
+  <h3>JSON biçimi</h3>
+<pre>{
+  "name": "Benim listem",
+  "sites": [
+    { "name": "Site adı", "url": "https://ornek.com", "category": "Film", "icon": "https://.../logo.png" }
+  ],
+  "blockHosts": ["reklam-agi.example"]
+}</pre>
+  <div class="dim">Düz dizi <code>[ {...}, {...} ]</code> ve <code>"categories":[{"name":"..","sites":[..]}]</code> biçimleri de desteklenir. <code>blockHosts</code> ile reklam alan adlarını da GitHub'dan yönetebilirsin.</div>
+</section>
+
+<section id="adblock"><h2>Reklam engelleme</h2>
+  <div class="card"><div class="stat"><b id="sBlocked">0</b>engellenen istek</div><div class="stat"><b id="sPop">0</b>engellenen pop-up</div><div class="stat"><b id="sRules">0</b>kural</div></div>
+  <div class="card">
+    <div class="row"><label>Reklam &amp; izleyici engelleme<small>Üçüncü taraf reklam ağlarına giden istekleri iptal eder</small></label><span class="sw"><input type="checkbox" id="adblock"><i></i></span></div>
+    <div class="row"><label>Pop-up / pop-under engelle<small>Tıklamadan açılan yeni pencereleri engeller</small></label><span class="sw"><input type="checkbox" id="popupBlock"><i></i></span></div>
+    <div class="row"><label>Sayfa içi reklam kutularını gizle<small>Boş kalan reklam alanlarını temizler</small></label><span class="sw"><input type="checkbox" id="cosmetic"><i></i></span></div>
+  </div>
+  <h3>Filtre listesi (URL)</h3>
+  <div class="card"><div class="row"><input id="filterListUrl" type="url" style="flex:1" placeholder="https://.../filter.txt"><button id="flSave">Kaydet</button><button id="flRefresh">↻</button></div><div class="dim">||alanadi^ ve hosts biçimleri desteklenir (AdGuard, StevenBlack…). Boş bırakırsan yalnızca yerleşik liste çalışır.</div></div>
+  <h3>Kendi engellenecek alan adlarım</h3>
+  <div class="card"><textarea id="customBlockHosts" placeholder="her satıra bir alan adı&#10;reklam.ornek.com"></textarea><div class="row"><button id="cbSave" class="primary">Kaydet</button></div></div>
+  <h3>En çok engellenenler</h3><div class="card" id="topBlocked" class="dim"></div>
+</section>
+
+<section id="remote"><h2>Telefon kumandası</h2>
+  <div class="card">
+    <div class="row"><label>Kumanda sunucusu<small>Yalnızca yerel ağdan (Wi-Fi) erişilir, gizli anahtar gerekir</small></label><span class="sw"><input type="checkbox" id="remoteEnabled"><i></i></span></div>
+    <div class="row"><label>Port</label><input id="remotePort" type="number" style="max-width:120px"></div>
+  </div>
+  <div class="card" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap"><canvas id="qr" width="220" height="220"></canvas>
+    <div style="flex:1;min-width:240px"><div id="rIps" class="row" style="margin-top:0"></div><div id="rUrl" class="dim" style="word-break:break-all;user-select:all"></div>
+      <div class="row"><button id="rCopy">Bağlantıyı kopyala</button><button id="rRegen" class="danger">Anahtarı yenile</button></div>
+      <div class="dim" style="font-size:13px">Windows güvenlik duvarı sorarsa <b>Özel ağlara izin ver</b> de.</div></div></div>
+</section>
+
+<section id="history"><h2>Geçmiş</h2>
+  <div class="row"><input id="hq" type="search" placeholder="Geçmişte ara…" style="flex:1"><button class="danger" id="hClear">Tümünü sil</button></div>
+  <div id="hList"></div>
+</section>
+
+<section id="about"><h2>Ghost Browser</h2><div class="card">Film izlemeye odaklı Electron tabanlı tarayıcı. Kendi oynatıcısı (HLS/MP4/WebM, altyazı), reklam engelleyici, GitHub kontrollü site listesi ve telefondan QR ile kumanda.<br><br><span class="dim">DRM'li (Widevine) servisler — Netflix, Disney+ vb. — stok Electron'da çalışmaz. Yasal ücretsiz kaynaklar ve doğrudan video bağlantıları sorunsuz oynar.</span></div></section>
+</main>
+<div id="msg"></div>
+<script src="ghost://static/spatial.js"></script>
+<script>
+const $ = (s) => document.querySelector(s); let S = {}, ipIdx = 0, rinfo = null;
+const msg = (t) => { const m = $('#msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(msg._t); msg._t = setTimeout(() => m.style.display = 'none', 2600); };
+const set = (p) => ghost.invoke('set', p).then(s => { S = s; });
+function nav() { const h = (location.hash || '#genel').slice(1); document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === h)); document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + h)); if (h === 'history') loadHistory(); if (h === 'adblock') loadAd(); if (h === 'remote') loadRemote(); if (h === 'siteler') loadSites(); }
+window.addEventListener('hashchange', nav);
+
+async function init() {
+  S = await ghost.invoke('settings');
+  for (const id of ['searchEngine', 'homepage', 'cursorSpeed', 'remotePort', 'filterListUrl']) $('#' + id).value = S[id];
+  for (const id of ['tvMode', 'adblock', 'popupBlock', 'cosmetic', 'remoteEnabled']) $('#' + id).checked = !!S[id];
+  $('#customBlockHosts').value = (S.customBlockHosts || []).join('\n');
+  for (const id of ['searchEngine', 'homepage', 'cursorSpeed', 'remotePort']) $('#' + id).onchange = (e) => { set({ [id]: e.target.value }); msg('Kaydedildi'); };
+  for (const id of ['tvMode', 'adblock', 'popupBlock', 'cosmetic', 'remoteEnabled']) $('#' + id).onchange = async (e) => { await set({ [id]: e.target.checked }); msg('Kaydedildi'); if (id === 'remoteEnabled') loadRemote(); };
+  nav();
+}
+// ---- siteler ----
+function renderSources(list) {
+  const box = $('#srcList'); box.innerHTML = '';
+  if (!list.length) box.innerHTML = '<div class="dim" style="padding:10px 0">Kaynak yok. Yukarıdan GitHub bağlantısı ekle.</div>';
+  list.forEach(s => {
+    const d = document.createElement('div'); d.className = 'src';
+    const st = s.pending ? '<span class="dim">yükleniyor…</span>' : s.ok ? `<span class="ok">✓ ${s.count} site${s.name ? ' · ' + s.name.replace(/</g, '') : ''}</span>` : `<span class="err">✗ ${String(s.error).replace(/</g, '')}${s.cached ? ' (önbellek: ' + s.count + ')' : ''}</span>`;
+    d.innerHTML = `<div class="u"></div><div>${st}</div><button class="danger">Kaldır</button>`; d.querySelector('.u').textContent = s.url;
+    d.querySelector('button').onclick = async () => { const r = await ghost.invoke('source-remove', s.url); renderSources(r.sources); };
+    box.append(d);
+  });
+}
+function renderLocal(list) {
+  const box = $('#localList'); box.innerHTML = '';
+  list.forEach(s => { const d = document.createElement('div'); d.className = 'src'; d.innerHTML = '<div class="u"></div><button class="danger">Sil</button>'; d.firstChild.textContent = `${s.name} — ${s.url}${s.category ? ' [' + s.category + ']' : ''}`; d.lastChild.onclick = async () => renderLocal((await ghost.invoke('local-remove', s.url)).local); box.append(d); });
+}
+async function loadSites() { const r = await ghost.invoke('sites'); renderSources(r.sources); renderLocal(r.local); }
+$('#srcAdd').onclick = async () => { try { $('#srcMsg').textContent = 'Alınıyor…'; const r = await ghost.invoke('source-add', $('#srcUrl').value); $('#srcUrl').value = ''; renderSources(r.sources); $('#srcMsg').textContent = ''; } catch (e) { $('#srcMsg').textContent = String(e.message).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''); } };
+$('#srcRefresh').onclick = async () => { $('#srcMsg').textContent = 'Yenileniyor…'; const r = await ghost.invoke('sites-refresh'); renderSources(r.sources); $('#srcMsg').textContent = 'Tamam'; };
+$('#lAdd').onclick = async () => { try { renderLocal((await ghost.invoke('local-add', { name: $('#lName').value, url: $('#lUrl').value, category: $('#lCat').value })).local); $('#lName').value = $('#lUrl').value = $('#lCat').value = ''; } catch (e) { msg('Geçersiz adres'); } };
+// ---- adblock ----
+async function loadAd() { const a = await ghost.invoke('adblock'); $('#sBlocked').textContent = a.blocked; $('#sPop').textContent = a.popups; $('#sRules').textContent = a.rules; $('#topBlocked').innerHTML = a.top.length ? a.top.map(([h, n]) => `<div class="row" style="margin:3px 0"><span style="flex:1">${h.replace(/</g, '')}</span><span class="chip">${n}</span></div>`).join('') : '<span class="dim">Henüz yok</span>'; }
+$('#flSave').onclick = async () => { await set({ filterListUrl: $('#filterListUrl').value.trim() }); msg('Kaydedildi, liste indiriliyor…'); setTimeout(loadAd, 4000); };
+$('#flRefresh').onclick = async () => { msg('Liste yenileniyor…'); await loadAd(await ghost.invoke('adblock-refresh')); loadAd(); };
+$('#cbSave').onclick = async () => { await set({ customBlockHosts: $('#customBlockHosts').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean) }); msg('Kaydedildi'); loadAd(); };
+// ---- kumanda ----
+async function loadRemote() { rinfo = await ghost.invoke('remote'); drawRemote(); }
+function drawRemote() {
+  const r = rinfo, c = $('#qr'), g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 220, 220);
+  $('#rIps').innerHTML = ''; if (!r || !r.enabled || !r.urls.length) { $('#rUrl').textContent = r && r.enabled ? 'Ağ bağlantısı bulunamadı' : 'Kumanda kapalı'; return; }
+  ipIdx = Math.min(ipIdx, r.urls.length - 1); const u = r.urls[ipIdx], rows = u.qr, n = rows.length + 8, s = 208 / n; g.fillStyle = '#000';
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '1') g.fillRect(Math.round(6 + (x + 4) * s), Math.round(6 + (y + 4) * s), Math.ceil(s), Math.ceil(s)); }));
+  $('#rUrl').textContent = u.url;
+  if (r.urls.length > 1) r.urls.forEach((x, i) => { const b = document.createElement('button'); b.textContent = x.ip + (i === ipIdx ? ' ✓' : ''); b.onclick = () => { ipIdx = i; drawRemote(); }; $('#rIps').append(b); });
+}
+$('#rCopy').onclick = async () => { if (rinfo && rinfo.urls[ipIdx]) { await ghost.invoke('copy', rinfo.urls[ipIdx].url); msg('Kopyalandı'); } };
+$('#rRegen').onclick = async () => { rinfo = await ghost.invoke('remote-regen'); drawRemote(); msg('Yeni anahtar üretildi'); };
+ghost.on('remote-updated', () => { if (location.hash === '#remote') loadRemote(); });
+// ---- geçmiş ----
+async function loadHistory() {
+  const list = await ghost.invoke('history', $('#hq').value, 200), box = $('#hList'); box.innerHTML = '';
+  if (!list.length) box.innerHTML = '<div class="dim" style="padding:14px">Kayıt yok.</div>';
+  list.forEach(h => { const d = document.createElement('div'); d.className = 'hist'; const a = document.createElement('a'); a.href = h.url; a.textContent = h.title || h.url; const sm = document.createElement('small'); sm.textContent = h.url.replace(/^https?:\/\//, '').slice(0, 70); a.append(sm); const t = document.createElement('time'); t.textContent = new Date(h.time).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); const x = document.createElement('button'); x.textContent = '✕'; x.onclick = async () => { await ghost.invoke('history-remove', h.url); loadHistory(); }; d.append(a, t, x); box.append(d); });
+}
+$('#hq').oninput = () => loadHistory();
+$('#hClear').onclick = async () => { if (confirm('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
+init();
+</script></body></html>

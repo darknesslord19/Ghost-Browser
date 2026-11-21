@@ -1,0 +1,66 @@
+{
+  "name": "ghost-browser",
+  "productName": "Ghost Browser",
+  "version": "1.0.0",
+  "description": "Film sitelerine odaklı, kendi oynatıcısı, reklam engelleyicisi ve QR kumandası olan tarayıcı",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "node scripts/vendor.js",
+    "test": "node scripts/selftest.js",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "hls.js": "^1.5.17"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.darknesslord19.ghostbrowser",
+    "productName": "Ghost Browser",
+    "files": [
+      "main.js",
+      "preload-*.js",
+      "lib/**",
+      "pages/**",
+      "sites.default.json",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.video",
+      "identity": null
+    },
+    "artifactName": "Ghost-Browser-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "author": {
+    "name": "darknesslord19",
+    "email": "darknesslord19@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/darknesslord19/Ghost-Browser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darknesslord19/Ghost-Browser.git"
+  }
+}
