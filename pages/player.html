@@ -54,7 +54,18 @@ video { width: 100%; height: 100%; object-fit: contain; background: #000; displa
 #toast { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); background: #000c; padding: 8px 16px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; }
 #toast.show { opacity: 1; }
 #drop { position: absolute; inset: 14px; border: 3px dashed var(--acc); border-radius: 18px; display: none; place-items: center; font-size: 22px; background: #8b5cf622; pointer-events: none; }
-@media (max-width:640px){#bFit,#bPip,.vwrap #vol{display:none}.row{gap:5px;padding:6px 0}.b{width:40px;height:40px;font-size:19px}#bPlay{width:48px;height:48px;font-size:24px}.b.txt{padding:0 11px;font-size:13px}#time{margin:0 2px;font-size:12px}}
+@media (max-width:700px){
+  #bFit,#bPip,.vwrap #vol{display:none}
+  #ctrl{padding:34px 12px 10px}
+  .row{flex-wrap:wrap;gap:4px;padding:4px 0;justify-content:space-between}
+  .row .sp{display:none}
+  #time{order:-1;flex:1 0 100%;margin:0 2px 2px;font-size:12px;opacity:.85}
+  .b{width:38px;height:38px;font-size:18px}
+  #bPlay{width:46px;height:46px;font-size:22px}
+  .b.txt{padding:0 10px;font-size:13px;height:38px}
+  #top{padding:12px 14px}
+  #panel{right:10px;left:10px;width:auto;bottom:130px}
+}
 </style></head>
 <body>
 <div id="stage" tabindex="-1">
