@@ -30,6 +30,7 @@ h2 { font-size: 15px; color: var(--dim); font-weight: 600; margin: 34px 0 12px; 
 .remote canvas { background: #fff; border-radius: 10px; padding: 5px; width: 150px; height: 150px; flex: none; image-rendering: pixelated; }
 .remote h3 { margin: 0 0 4px; } .remote p { margin: 0; color: var(--dim); font-size: 13px; }
 .empty { text-align: center; padding: 40px 10px; color: var(--dim); grid-column: 1/-1; }
+@media (max-width:640px){.remote{display:none !important}}
 </style></head>
 <body data-spatial>
 <div class="wrap">
@@ -76,7 +77,7 @@ function render() {
 }
 async function load() { data = await ghost.invoke('newtab'); render(); drawRemote(); }
 async function drawRemote() {
-  const r = await ghost.invoke('remote'); const card = $('#remoteCard');
+  const r = await ghost.invoke('remote'); const card = $('#remoteCard'); if (data && data.tv) { card.style.display='flex'; const c=$('#cats'); c.parentNode.insertBefore(card,c); }
   if (!r.enabled || !r.urls.length) { card.style.display = 'none'; return; }
   card.style.display = 'flex'; const rows = r.urls[0].qr, n = rows.length + 8, c = $('#qr'), g = c.getContext('2d'), s = 140 / n;
   g.fillStyle = '#fff'; g.fillRect(0, 0, 150, 150); g.fillStyle = '#000';

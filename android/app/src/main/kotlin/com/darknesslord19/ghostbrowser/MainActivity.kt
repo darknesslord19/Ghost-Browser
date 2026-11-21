@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.net.Uri
@@ -42,7 +43,8 @@ import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.PopupMenu
+import android.widget.PopupWindow
+import android.widget.ScrollView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -82,12 +84,15 @@ class MainActivity : Activity() {
     private var isTv = false
 
     private lateinit var bar: LinearLayout
-    private lateinit var btnBack: TextView
-    private lateinit var btnFwd: TextView
-    private lateinit var btnReload: TextView
+    private lateinit var pill: LinearLayout
+    private lateinit var btnBack: IconView
+    private lateinit var btnFwd: IconView
+    private lateinit var btnHome: IconView
+    private lateinit var btnReload: IconView
+    private lateinit var siteIcon: IconView
     private lateinit var btnMedia: TextView
-    private lateinit var btnTabs: TextView
-    private lateinit var btnMenu: TextView
+    private lateinit var btnTabs: TabCountView
+    private lateinit var btnMenu: IconView
     private lateinit var omni: EditText
     private lateinit var progress: ProgressBar
     private lateinit var holder: FrameLayout
@@ -168,32 +173,49 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
-    // ================= arayüz =================
-    private fun tb(label: String, onClick: () -> Unit): TextView {
-        val t = TextView(this)
-        t.text = label
-        t.textSize = 19f
-        t.setTextColor(Color.parseColor("#CFCFE2"))
-        t.gravity = Gravity.CENTER
-        t.isFocusable = true
-        t.isClickable = true
+    // ================= arayüz (telefon + TV uyumlu) =================
+    private val cBar = Color.parseColor("#14141D")
+    private val cPill = Color.parseColor("#25253A")
+    private val cAcc = Color.parseColor("#8B5CF6")
+    private val cDim = Color.parseColor("#9A9AB2")
+
+    /** TV'de ya da TV modu açıkken arayüz büyür. */
+    private fun big() = isTv || store.bool("tvMode")
+
+    private fun focusBg(radiusDp: Int = 12): StateListDrawable {
         val bg = StateListDrawable()
         val f = GradientDrawable()
-        f.setColor(Color.parseColor("#3B3B55"))
-        f.cornerRadius = dp(10).toFloat()
+        f.setColor(Color.parseColor("#2E2E48"))
+        f.cornerRadius = dp(radiusDp).toFloat()
+        f.setStroke(dp(2), cAcc)
         val pr = GradientDrawable()
         pr.setColor(Color.parseColor("#2A2A3D"))
-        pr.cornerRadius = dp(10).toFloat()
+        pr.cornerRadius = dp(radiusDp).toFloat()
         bg.addState(intArrayOf(android.R.attr.state_focused), f)
         bg.addState(intArrayOf(android.R.attr.state_pressed), pr)
-        t.background = bg
-        t.setOnClickListener { onClick() }
-        t.layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
-        return t
+        return bg
+    }
+
+    private fun pillBg(focused: Boolean): GradientDrawable {
+        val g = GradientDrawable()
+        g.setColor(cPill)
+        g.cornerRadius = dp(24).toFloat()
+        if (focused) g.setStroke(dp(2), cAcc)
+        return g
+    }
+
+    private fun ib(kind: String, onClick: () -> Unit): IconView {
+        val v = IconView(this, kind)
+        v.isFocusable = true
+        v.isClickable = true
+        v.background = focusBg()
+        v.setPadding(dp(8), dp(8), dp(8), dp(8))
+        v.setOnClickListener { onClick() }
+        return v
     }
 
     private fun buildUi() {
-        window.statusBarColor = Color.parseColor("#14141D")
+        window.statusBarColor = cBar
         window.navigationBarColor = Color.parseColor("#0B0B10")
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
@@ -202,29 +224,29 @@ class MainActivity : Activity() {
         bar = LinearLayout(this)
         bar.orientation = LinearLayout.HORIZONTAL
         bar.gravity = Gravity.CENTER_VERTICAL
-        bar.setBackgroundColor(Color.parseColor("#14141D"))
-        bar.setPadding(dp(4), 0, dp(4), 0)
+        bar.setBackgroundColor(cBar)
+        bar.setPadding(dp(8), dp(6), dp(4), dp(6))
 
-        btnBack = tb("◀") { cur?.webView?.let { if (it.canGoBack()) it.goBack() } }
-        btnFwd = tb("▶") { cur?.webView?.let { if (it.canGoForward()) it.goForward() } }
-        btnReload = tb("⟳") {
-            val t = cur
-            if (t != null) { if (t.loading) t.webView.stopLoading() else t.webView.reload() }
-        }
-        val btnHome = tb("⌂") { cur?.let { loadIn(it, store.str("homepage")) } }
+        btnBack = ib("back") { cur?.webView?.let { if (it.canGoBack()) it.goBack() } }
+        btnFwd = ib("forward") { cur?.webView?.let { if (it.canGoForward()) it.goForward() } }
+        btnHome = ib("home") { cur?.let { loadIn(it, store.str("homepage")) } }
+
+        pill = LinearLayout(this)
+        pill.orientation = LinearLayout.HORIZONTAL
+        pill.gravity = Gravity.CENTER_VERTICAL
+        pill.background = pillBg(false)
+        pill.setPadding(dp(14), 0, dp(4), 0)
+        siteIcon = IconView(this, "search")
+        siteIcon.tint = cDim
         omni = EditText(this)
         omni.setSingleLine()
-        omni.hint = "Film ara ya da adres yaz…"
+        omni.hint = "Ara veya adres yaz"
         omni.setTextColor(Color.WHITE)
         omni.setHintTextColor(Color.parseColor("#80809A"))
-        omni.textSize = 14f
-        omni.imeOptions = EditorInfo.IME_ACTION_GO
+        omni.setBackgroundColor(Color.TRANSPARENT)
+        omni.setPadding(dp(10), 0, dp(4), 0)
+        omni.imeOptions = EditorInfo.IME_ACTION_GO or EditorInfo.IME_FLAG_NO_EXTRACT_UI
         omni.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-        val ob = GradientDrawable()
-        ob.setColor(Color.parseColor("#0B0B10"))
-        ob.cornerRadius = dp(20).toFloat()
-        omni.background = ob
-        omni.setPadding(dp(14), 0, dp(14), 0)
         omni.setOnEditorActionListener { v, _, _ ->
             val text = v.text.toString()
             omni.clearFocus()
@@ -233,27 +255,54 @@ class MainActivity : Activity() {
             if (t != null) loadIn(t, text) else newTab(text)
             true
         }
-        omni.setOnFocusChangeListener { _, f -> if (f) omni.post { omni.selectAll() } else updateUi() }
-        btnMedia = tb("🎬") { showMedia() }
+        omni.setOnFocusChangeListener { _, f ->
+            pill.background = pillBg(f)
+            if (f) {
+                omni.setText(display(cur?.url ?: ""))
+                omni.post { omni.selectAll() }
+            } else updateUi()
+        }
+        btnReload = ib("reload") {
+            val t = cur
+            if (t != null) { if (t.loading) t.webView.stopLoading() else t.webView.reload() }
+        }
+        pill.addView(siteIcon)
+        pill.addView(omni)
+        pill.addView(btnReload)
+
+        btnMedia = TextView(this)
+        btnMedia.text = "▶"
+        btnMedia.setTextColor(Color.WHITE)
+        btnMedia.gravity = Gravity.CENTER
+        btnMedia.setTypeface(btnMedia.typeface, android.graphics.Typeface.BOLD)
+        val mb = GradientDrawable()
+        mb.setColor(cAcc)
+        mb.cornerRadius = dp(16).toFloat()
+        btnMedia.background = mb
+        btnMedia.setPadding(dp(10), 0, dp(10), 0)
+        btnMedia.isFocusable = true
+        btnMedia.isClickable = true
+        btnMedia.setOnClickListener { showMedia() }
         btnMedia.visibility = View.GONE
-        btnTabs = tb("1") { showTabs() }
-        btnTabs.textSize = 14f
-        btnMenu = tb("⋮") { showMenu() }
+
+        btnTabs = TabCountView(this)
+        btnTabs.isFocusable = true
+        btnTabs.isClickable = true
+        btnTabs.background = focusBg()
+        btnTabs.setOnClickListener { showTabs() }
+        btnMenu = ib("dots") { showMenu() }
 
         bar.addView(btnBack)
         bar.addView(btnFwd)
-        bar.addView(btnReload)
         bar.addView(btnHome)
-        val lp = LinearLayout.LayoutParams(0, dp(40), 1f)
-        lp.setMargins(dp(4), 0, dp(4), 0)
-        bar.addView(omni, lp)
+        bar.addView(pill)
         bar.addView(btnMedia)
         bar.addView(btnTabs)
         bar.addView(btnMenu)
 
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal)
         progress.max = 100
-        progress.progressTintList = ColorStateList.valueOf(Color.parseColor("#8B5CF6"))
+        progress.progressTintList = ColorStateList.valueOf(cAcc)
         progress.visibility = View.GONE
 
         holder = FrameLayout(this)
@@ -262,22 +311,71 @@ class MainActivity : Activity() {
         content.addView(holder, FrameLayout.LayoutParams(-1, -1))
         content.addView(cursor, FrameLayout.LayoutParams(-1, -1))
 
-        root.addView(bar, LinearLayout.LayoutParams(-1, dp(if (isTv) 60 else 52)))
+        root.addView(bar, LinearLayout.LayoutParams(-1, dp(60)))
         root.addView(progress, LinearLayout.LayoutParams(-1, dp(3)))
         root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
+        applyMode()
+    }
+
+    /** Ekran türüne göre ölçüler: telefon (sade), tablet (geri/ileri görünür), TV (büyük + odak). */
+    private fun applyMode() {
+        val big = big()
+        val wide = big || resources.configuration.smallestScreenWidthDp >= 600
+        val k = if (big) 1.3f else 1f
+        fun sz(v: Int) = (dp(v) * k).toInt()
+        bar.layoutParams.height = sz(60)
+        for (v in listOf(btnBack, btnFwd, btnHome)) {
+            v.visibility = if (wide) View.VISIBLE else View.GONE
+            v.layoutParams = LinearLayout.LayoutParams(sz(42), sz(42))
+        }
+        val pl = LinearLayout.LayoutParams(0, sz(46), 1f)
+        pl.setMargins(dp(6), 0, dp(6), 0)
+        pill.layoutParams = pl
+        siteIcon.layoutParams = LinearLayout.LayoutParams(sz(18), sz(18))
+        omni.layoutParams = LinearLayout.LayoutParams(0, -1, 1f)
+        omni.textSize = if (big) 18f else 15f
+        btnReload.layoutParams = LinearLayout.LayoutParams(sz(38), sz(38))
+        btnMedia.layoutParams = LinearLayout.LayoutParams(-2, sz(32)).also { it.setMargins(0, 0, dp(4), 0) }
+        btnMedia.textSize = if (big) 15f else 13f
+        btnTabs.layoutParams = LinearLayout.LayoutParams(sz(44), sz(44))
+        btnMenu.layoutParams = LinearLayout.LayoutParams(sz(42), sz(42))
+        bar.requestLayout()
+        for (t in tabs) t.webView.settings.textZoom = if (big) 125 else 100
+    }
+
+    private fun focusBar() {
+        val v: View = if (btnBack.visibility == View.VISIBLE) btnBack else omni
+        v.requestFocus()
+    }
+
+    private fun pretty(u: String): String = when {
+        u.isEmpty() || u.startsWith(ASSET + "newtab") -> ""
+        u.startsWith(ASSET + "player") -> "Ghost Oynatıcı"
+        u.startsWith(ASSET + "settings") -> "Ayarlar"
+        u.startsWith("http") -> ((try { Uri.parse(u).host } catch (_: Exception) { null }) ?: u).removePrefix("www.")
+        else -> u
     }
 
     private fun updateUi() {
         val t = cur ?: return
         btnBack.alpha = if (t.webView.canGoBack()) 1f else 0.3f
         btnFwd.alpha = if (t.webView.canGoForward()) 1f else 0.3f
-        btnReload.text = if (t.loading) "✕" else "⟳"
-        btnTabs.text = tabs.size.toString()
-        if (!omni.hasFocus()) omni.setText(display(t.url))
+        btnReload.kind = if (t.loading) "close" else "reload"
+        btnReload.invalidate()
+        btnTabs.count = tabs.size
+        if (!omni.hasFocus()) omni.setText(pretty(t.url))
+        val u = t.url
+        siteIcon.kind = when {
+            u.startsWith(ASSET) || u.isEmpty() -> "search"
+            u.startsWith("https://") -> "lock"
+            else -> "info"
+        }
+        siteIcon.tint = if (siteIcon.kind == "info") Color.parseColor("#FBBF24") else cDim
+        siteIcon.invalidate()
         if (t.media.isNotEmpty()) {
             btnMedia.visibility = View.VISIBLE
-            btnMedia.text = "🎬" + t.media.size
+            btnMedia.text = "▶ " + t.media.size
         } else btnMedia.visibility = View.GONE
     }
 
@@ -366,9 +464,11 @@ class MainActivity : Activity() {
         } else updateUi()
     }
 
+    private fun dialog() = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+
     private fun showTabs() {
-        val names = tabs.map { (if (it === cur) "● " else "   ") + (it.title.ifEmpty { display(it.url) }.ifEmpty { "Yeni sekme" }) }.toTypedArray()
-        AlertDialog.Builder(this)
+        val names = tabs.map { (if (it === cur) "● " else "   ") + (it.title.ifEmpty { pretty(it.url) }.ifEmpty { "Yeni sekme" }) }.toTypedArray()
+        dialog()
             .setTitle("Sekmeler (${tabs.size})")
             .setItems(names) { _, i -> switchTo(tabs[i]) }
             .setPositiveButton("＋ Yeni sekme") { _, _ -> newTab("ghost://newtab") }
@@ -382,38 +482,105 @@ class MainActivity : Activity() {
             val u = Uri.parse(it.url)
             it.kind + " · " + (u.host ?: "") + (u.path ?: "").takeLast(36)
         }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("🎬 Ghost Oynatıcı'da aç")
+        dialog()
+            .setTitle("Ghost Oynatıcı'da aç")
             .setItems(items) { _, i -> val m = t.media[i]; newTab(playerUrl(m.url, t.title, m.ref)) }
             .show()
     }
 
     private fun showMenu() {
-        val m = PopupMenu(this, btnMenu)
-        m.menu.add(0, 1, 0, "Yeni sekme")
-        m.menu.add(0, 2, 1, "Sekmeler")
-        m.menu.add(0, 3, 2, "Geçmiş")
-        m.menu.add(0, 4, 3, "Ayarlar")
-        m.menu.add(0, 5, 4, "📱 Telefon kumandası (QR)")
-        m.menu.add(0, 6, 5, (if (store.bool("tvMode")) "✓ " else "") + "TV modu")
-        m.menu.add(0, 7, 6, (if (store.bool("adblock")) "✓ " else "") + "Reklam engelleyici")
-        m.menu.add(0, 8, 7, "Tam ekran")
-        m.menu.add(0, 9, 8, "Çıkış")
-        m.setOnMenuItemClickListener {
-            when (it.itemId) {
-                1 -> newTab("ghost://newtab")
-                2 -> showTabs()
-                3 -> openInternal("settings#history")
-                4 -> openInternal("settings")
-                5 -> openInternal("settings#remote")
-                6 -> { store.patch(JSONObject().put("tvMode", !store.bool("tvMode"))); toast(if (store.bool("tvMode")) "TV modu açık" else "TV modu kapalı") }
-                7 -> { store.patch(JSONObject().put("adblock", !store.bool("adblock"))); adblock.enabled = store.bool("adblock") }
-                8 -> toggleImmersive()
-                9 -> finish()
-            }
-            true
+        val big = big()
+        val k = if (big) 1.25f else 1f
+        fun sz(v: Int) = (dp(v) * k).toInt()
+        val ref = arrayOfNulls<PopupWindow>(1)
+        val t = cur
+
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        val bg = GradientDrawable()
+        bg.setColor(Color.parseColor("#1E1E2B"))
+        bg.cornerRadius = dp(20).toFloat()
+        bg.setStroke(dp(1), Color.parseColor("#34344D"))
+        card.background = bg
+        card.setPadding(dp(6), dp(8), dp(6), dp(8))
+
+        fun divider() {
+            val d = View(this)
+            d.setBackgroundColor(Color.parseColor("#2C2C42"))
+            val lp = LinearLayout.LayoutParams(-1, dp(1))
+            lp.setMargins(dp(10), dp(6), dp(10), dp(6))
+            card.addView(d, lp)
         }
-        m.show()
+
+        val top = LinearLayout(this)
+        top.orientation = LinearLayout.HORIZONTAL
+        fun topBtn(kind: String, enabled: Boolean, action: () -> Unit) {
+            val v = ib(kind) { ref[0]?.dismiss(); action() }
+            v.alpha = if (enabled) 1f else 0.35f
+            v.isEnabled = enabled
+            top.addView(v, LinearLayout.LayoutParams(0, sz(48), 1f))
+        }
+        topBtn("back", t?.webView?.canGoBack() == true) { t?.webView?.goBack() }
+        topBtn("forward", t?.webView?.canGoForward() == true) { t?.webView?.goForward() }
+        topBtn(if (t?.loading == true) "close" else "reload", t != null) {
+            if (t != null) { if (t.loading) t.webView.stopLoading() else t.webView.reload() }
+        }
+        topBtn("home", t != null) { if (t != null) loadIn(t, store.str("homepage")) }
+        card.addView(top)
+        divider()
+
+        fun row(kind: String, label: String, toggle: Boolean? = null, action: () -> Unit) {
+            val r = LinearLayout(this)
+            r.orientation = LinearLayout.HORIZONTAL
+            r.gravity = Gravity.CENTER_VERTICAL
+            r.isFocusable = true
+            r.isClickable = true
+            r.background = focusBg()
+            r.setPadding(dp(12), 0, dp(12), 0)
+            r.addView(IconView(this, kind), LinearLayout.LayoutParams(sz(22), sz(22)))
+            val tv = TextView(this)
+            tv.text = label
+            tv.setTextColor(Color.parseColor("#ECECF4"))
+            tv.textSize = if (big) 18f else 15f
+            tv.setPadding(dp(16), 0, 0, 0)
+            r.addView(tv, LinearLayout.LayoutParams(0, -2, 1f))
+            if (toggle != null) r.addView(ToggleView(this, toggle), LinearLayout.LayoutParams(sz(38), sz(22)))
+            r.setOnClickListener { ref[0]?.dismiss(); action() }
+            card.addView(r, LinearLayout.LayoutParams(-1, sz(50)))
+        }
+        row("plus", "Yeni sekme") { newTab("ghost://newtab") }
+        row("tabs", "Sekmeler") { showTabs() }
+        row("clock", "Geçmiş") { openInternal("settings#history") }
+        row("phone", "Telefon kumandası (QR)") { openInternal("settings#remote") }
+        divider()
+        row("shield", "Reklam engelleyici", store.bool("adblock")) {
+            store.patch(JSONObject().put("adblock", !store.bool("adblock")))
+            adblock.enabled = store.bool("adblock")
+            toast(if (adblock.enabled) "Reklam engelleyici açık" else "Reklam engelleyici kapalı")
+        }
+        row("tv", "TV modu", store.bool("tvMode")) {
+            store.patch(JSONObject().put("tvMode", !store.bool("tvMode")))
+            applyMode()
+            toast(if (store.bool("tvMode")) "TV modu açık" else "TV modu kapalı")
+        }
+        row("fullscreen", "Tam ekran") { toggleImmersive() }
+        divider()
+        row("gear", "Ayarlar") { openInternal("settings") }
+        row("power", "Çıkış") { finish() }
+
+        val dm = resources.displayMetrics
+        val w = minOf(sz(300), dm.widthPixels - dp(16))
+        val scroll = ScrollView(this)
+        scroll.addView(card)
+        card.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+        val h = minOf(card.measuredHeight, (dm.heightPixels * 0.85).toInt())
+        val popup = PopupWindow(scroll, w, h, true)
+        ref[0] = popup
+        popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        popup.elevation = dp(16).toFloat()
+        popup.isOutsideTouchable = true
+        popup.showAsDropDown(btnMenu, 0, -dp(4), Gravity.END)
+        card.getChildAt(2)?.requestFocus()
     }
 
     private fun openInternal(name: String) {
@@ -450,6 +617,7 @@ class MainActivity : Activity() {
         s.allowFileAccess = false
         s.allowContentAccess = false
         s.userAgentString = ua
+        s.textZoom = if (big()) 125 else 100
         wv.setBackgroundColor(Color.parseColor("#0B0B10"))
         wv.isFocusable = true
         wv.isFocusableInTouchMode = true
@@ -588,14 +756,14 @@ class MainActivity : Activity() {
             }
 
             override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
-                AlertDialog.Builder(this@MainActivity).setMessage(message)
+                AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog_Alert).setMessage(message)
                     .setPositiveButton("Tamam") { _, _ -> result.confirm() }
                     .setOnCancelListener { result.cancel() }.show()
                 return true
             }
 
             override fun onJsConfirm(view: WebView, url: String, message: String, result: JsResult): Boolean {
-                AlertDialog.Builder(this@MainActivity).setMessage(message)
+                AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog_Alert).setMessage(message)
                     .setPositiveButton("Tamam") { _, _ -> result.confirm() }
                     .setNegativeButton("İptal") { _, _ -> result.cancel() }
                     .setOnCancelListener { result.cancel() }.show()
@@ -703,6 +871,7 @@ class MainActivity : Activity() {
                     store.patch(args.optJSONObject(0) ?: JSONObject())
                     adblock.enabled = store.bool("adblock")
                     adblock.setCustom(store.arr("customBlockHosts"))
+                    applyMode()
                     if (oldPort != store.int("remotePort") || oldEn != store.bool("remoteEnabled")) startRemote()
                     if (oldFl != store.str("filterListUrl")) exec.execute { adblock.refreshFilter(store.str("filterListUrl"), true) }
                     reply(true, store.settings)
@@ -1093,7 +1262,7 @@ class MainActivity : Activity() {
             val k = e.keyCode
             if (k == KeyEvent.KEYCODE_MENU || k == KeyEvent.KEYCODE_BUTTON_Y) {
                 if (e.action == KeyEvent.ACTION_DOWN && e.repeatCount == 0) {
-                    if (bar.hasFocus()) t.webView.requestFocus() else btnBack.requestFocus()
+                    if (bar.hasFocus()) t.webView.requestFocus() else focusBar()
                 }
                 return true
             }
@@ -1113,7 +1282,7 @@ class MainActivity : Activity() {
                             if (e.repeatCount == 0) tap(t)
                         } else {
                             if (k == KeyEvent.KEYCODE_DPAD_UP && t.cy <= 10f) {
-                                btnBack.requestFocus()
+                                focusBar()
                                 return true
                             }
                             val accel = minOf(1f + e.repeatCount * 0.5f, 8f)
