@@ -466,14 +466,155 @@ class MainActivity : Activity() {
 
     private fun dialog() = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
 
+    private fun cardPopup(w: Int, content: LinearLayout): PopupWindow {
+        val bg = GradientDrawable()
+        bg.setColor(Color.parseColor("#1E1E2B"))
+        bg.cornerRadius = dp(20).toFloat()
+        bg.setStroke(dp(1), Color.parseColor("#34344D"))
+        content.background = bg
+        content.setPadding(dp(8), dp(10), dp(8), dp(10))
+        val dm = resources.displayMetrics
+        val scroll = ScrollView(this)
+        scroll.addView(content)
+        content.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+        val h = minOf(content.measuredHeight, (dm.heightPixels * 0.8).toInt())
+        val popup = PopupWindow(scroll, w, h, true)
+        popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        popup.elevation = dp(16).toFloat()
+        popup.isOutsideTouchable = true
+        return popup
+    }
+
     private fun showTabs() {
-        val names = tabs.map { (if (it === cur) "● " else "   ") + (it.title.ifEmpty { pretty(it.url) }.ifEmpty { "Yeni sekme" }) }.toTypedArray()
-        dialog()
-            .setTitle("Sekmeler (${tabs.size})")
-            .setItems(names) { _, i -> switchTo(tabs[i]) }
-            .setPositiveButton("＋ Yeni sekme") { _, _ -> newTab("ghost://newtab") }
-            .setNeutralButton("Bu sekmeyi kapat") { _, _ -> cur?.let { closeTab(it) } }
-            .show()
+        val big = big()
+        val k = if (big) 1.25f else 1f
+        fun sz(v: Int) = (dp(v) * k).toInt()
+        val ref = arrayOfNulls<PopupWindow>(1)
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        val title = TextView(this)
+        title.text = "Sekmeler (${tabs.size})"
+        title.setTextColor(Color.WHITE)
+        title.textSize = if (big) 20f else 17f
+        title.setTypeface(title.typeface, android.graphics.Typeface.BOLD)
+        title.setPadding(dp(12), dp(2), dp(12), dp(8))
+        card.addView(title)
+        for (t in ArrayList(tabs)) {
+            val r = LinearLayout(this)
+            r.orientation = LinearLayout.HORIZONTAL
+            r.gravity = Gravity.CENTER_VERTICAL
+            r.isFocusable = true
+            r.isClickable = true
+            r.background = focusBg()
+            r.setPadding(dp(12), 0, dp(4), 0)
+            val dot = View(this)
+            val dg = GradientDrawable()
+            dg.shape = GradientDrawable.OVAL
+            dg.setColor(if (t === cur) cAcc else Color.parseColor("#3A3A55"))
+            dot.background = dg
+            r.addView(dot, LinearLayout.LayoutParams(dp(10), dp(10)))
+            val tv = TextView(this)
+            tv.text = t.title.ifEmpty { pretty(t.url) }.ifEmpty { "Yeni sekme" }
+            tv.setSingleLine()
+            tv.ellipsize = android.text.TextUtils.TruncateAt.END
+            tv.setTextColor(Color.parseColor("#ECECF4"))
+            tv.textSize = if (big) 18f else 15f
+            tv.setPadding(dp(14), 0, dp(8), 0)
+            r.addView(tv, LinearLayout.LayoutParams(0, -2, 1f))
+            val x = ib("close") { ref[0]?.dismiss(); closeTab(t) }
+            r.addView(x, LinearLayout.LayoutParams(sz(40), sz(40)))
+            r.setOnClickListener { ref[0]?.dismiss(); switchTo(t) }
+            card.addView(r, LinearLayout.LayoutParams(-1, sz(50)))
+        }
+        val d = View(this)
+        d.setBackgroundColor(Color.parseColor("#2C2C42"))
+        val dl = LinearLayout.LayoutParams(-1, dp(1))
+        dl.setMargins(dp(10), dp(6), dp(10), dp(6))
+        card.addView(d, dl)
+        val add = LinearLayout(this)
+        add.orientation = LinearLayout.HORIZONTAL
+        add.gravity = Gravity.CENTER_VERTICAL
+        add.isFocusable = true
+        add.isClickable = true
+        add.background = focusBg()
+        add.setPadding(dp(12), 0, dp(12), 0)
+        add.addView(IconView(this, "plus"), LinearLayout.LayoutParams(sz(22), sz(22)))
+        val at = TextView(this)
+        at.text = "Yeni sekme"
+        at.setTextColor(Color.parseColor("#ECECF4"))
+        at.textSize = if (big) 18f else 15f
+        at.setPadding(dp(14), 0, 0, 0)
+        add.addView(at)
+        add.setOnClickListener { ref[0]?.dismiss(); newTab("ghost://newtab") }
+        card.addView(add, LinearLayout.LayoutParams(-1, sz(50)))
+        val w = minOf(sz(340), resources.displayMetrics.widthPixels - dp(32))
+        val popup = cardPopup(w, card)
+        ref[0] = popup
+        popup.showAtLocation(window.decorView, Gravity.CENTER, 0, 0)
+        card.getChildAt(1)?.requestFocus()
+    }
+
+    private var askPopup: PopupWindow? = null
+
+    /** Film sitesinde video yakalanınca: Ghost Oynatıcı'da açılsın mı? */
+    private fun askPlayer(tab: Tab) {
+        if (tab !== cur || tab.isPlayer || tab.isInternal || tab.media.isEmpty()) return
+        if (store.settings.has("askPlayer") && !store.bool("askPlayer")) return
+        if (tab.asked == tab.url || askPopup?.isShowing == true) return
+        tab.asked = tab.url
+        val big = big()
+        val k = if (big) 1.25f else 1f
+        fun sz(v: Int) = (dp(v) * k).toInt()
+        val ref = arrayOfNulls<PopupWindow>(1)
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        val msg = TextView(this)
+        msg.text = "▶ Video bulundu"
+        msg.setTextColor(Color.WHITE)
+        msg.textSize = if (big) 19f else 16f
+        msg.setTypeface(msg.typeface, android.graphics.Typeface.BOLD)
+        msg.setPadding(dp(10), 0, dp(10), dp(2))
+        card.addView(msg)
+        val sub = TextView(this)
+        sub.text = "Ghost Oynatıcı'da reklamsız açılsın mı?"
+        sub.setTextColor(cDim)
+        sub.textSize = if (big) 15f else 13f
+        sub.setPadding(dp(10), 0, dp(10), dp(10))
+        card.addView(sub)
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        fun btn(label: String, fill: Boolean, action: () -> Unit) {
+            val b = TextView(this)
+            b.text = label
+            b.gravity = Gravity.CENTER
+            b.setTextColor(Color.WHITE)
+            b.textSize = if (big) 16f else 14f
+            b.isFocusable = true
+            b.isClickable = true
+            val g = GradientDrawable()
+            g.setColor(if (fill) cAcc else Color.parseColor("#2A2A3D"))
+            g.cornerRadius = dp(14).toFloat()
+            b.background = g
+            b.setOnFocusChangeListener { _, f -> g.setStroke(if (f) dp(2) else 0, Color.WHITE) }
+            b.setOnClickListener { ref[0]?.dismiss(); action() }
+            val lp = LinearLayout.LayoutParams(0, sz(44), 1f)
+            lp.setMargins(dp(4), 0, dp(4), 0)
+            row.addView(b, lp)
+        }
+        btn("Hayır", false) { }
+        btn("Oynatıcıda aç", true) {
+            val m = tab.media[0]
+            newTab(playerUrl(m.url, tab.title, m.ref))
+        }
+        card.addView(row)
+        val w = minOf(sz(360), resources.displayMetrics.widthPixels - dp(24))
+        val popup = cardPopup(w, card)
+        popup.isFocusable = big
+        ref[0] = popup
+        askPopup = popup
+        popup.showAtLocation(window.decorView, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, dp(28))
+        if (big) row.getChildAt(1)?.requestFocus()
+        main.postDelayed({ if (popup.isShowing) popup.dismiss() }, 15000)
     }
 
     private fun showMedia() {
@@ -562,6 +703,10 @@ class MainActivity : Activity() {
             store.patch(JSONObject().put("tvMode", !store.bool("tvMode")))
             applyMode()
             toast(if (store.bool("tvMode")) "TV modu açık" else "TV modu kapalı")
+        }
+        row("play", "Videoda oynatıcı sor", store.bool("askPlayer")) {
+            store.patch(JSONObject().put("askPlayer", !store.bool("askPlayer")))
+            toast(if (store.bool("askPlayer")) "Video bulununca sorulacak" else "Sorma kapalı")
         }
         row("fullscreen", "Tam ekran") { toggleImmersive() }
         divider()
@@ -797,7 +942,7 @@ class MainActivity : Activity() {
             if (tab.media.any { it.url == url }) return@post
             tab.media.add(0, MediaItem(url, tab.url, if (url.contains("m3u8", true)) "HLS" else "Video"))
             while (tab.media.size > 15) tab.media.removeAt(tab.media.size - 1)
-            if (tab === cur) updateUi()
+            if (tab === cur) { updateUi(); askPlayer(tab) }
         }
     }
 

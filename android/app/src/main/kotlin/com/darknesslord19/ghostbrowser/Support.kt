@@ -17,6 +17,7 @@ class Tab(val id: Int, val webView: WebView) {
     var title: String = "Yeni sekme"
     var loading = false
     var lastPopup = 0L
+    var asked = ""
     var cx = 300f
     var cy = 300f
     val media = ArrayList<MediaItem>()

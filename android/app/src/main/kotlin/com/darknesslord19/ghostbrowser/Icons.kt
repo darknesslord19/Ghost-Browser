@@ -37,9 +37,18 @@ class IconView(ctx: Context, var kind: String) : View(ctx) {
             "back" -> { c.drawLine(5f, 12f, 19f, 12f, p); c.drawLine(11f, 6f, 5f, 12f, p); c.drawLine(5f, 12f, 11f, 18f, p) }
             "forward" -> { c.drawLine(19f, 12f, 5f, 12f, p); c.drawLine(13f, 6f, 19f, 12f, p); c.drawLine(19f, 12f, 13f, 18f, p) }
             "reload" -> {
-                c.drawArc(RectF(5f, 5f, 19f, 19f), -50f, 285f, false, p)
-                c.drawLine(15.4f, 5.9f, 19.6f, 6.6f, p)
-                c.drawLine(15.4f, 5.9f, 15.8f, 1.8f, p)
+                p.strokeWidth = 2.6f
+                c.drawArc(RectF(5f, 5f, 19f, 19f), 20f, 290f, false, p)
+                val a = Math.toRadians(-50.0)
+                val ex = 12f + 7f * Math.cos(a).toFloat(); val ey = 12f + 7f * Math.sin(a).toFloat()
+                val tx = (-Math.sin(a)).toFloat(); val ty = Math.cos(a).toFloat()
+                val nx = Math.cos(a).toFloat(); val ny = Math.sin(a).toFloat()
+                val ah = Path()
+                ah.moveTo(ex + tx * 4.6f, ey + ty * 4.6f)
+                ah.lineTo(ex + nx * 3.8f, ey + ny * 3.8f)
+                ah.lineTo(ex - nx * 3.8f, ey - ny * 3.8f)
+                ah.close()
+                c.drawPath(ah, f)
             }
             "close" -> { c.drawLine(6f, 6f, 18f, 18f, p); c.drawLine(18f, 6f, 6f, 18f, p) }
             "home" -> {
