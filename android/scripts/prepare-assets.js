@@ -17,6 +17,7 @@ for (const f of ['newtab', 'settings', 'player']) {
 }
 write('remote.html', read('pages', 'remote.html'));
 write('shared.css', read('pages', 'shared.css'));
+fs.copyFileSync(path.join(root, 'pages', 'logo.png'), path.join(out, 'logo.png'));
 write('spatial.js', read('pages', 'spatial.js'));
 write('android-shim.js', fs.readFileSync(path.join(__dirname, '..', 'shim', 'android-shim.js'), 'utf8'));
 write('qr-browser.js', '(function(){const module={exports:{}};\n' + read('lib', 'qr.js') + '\n;window.GhostQR=module.exports;})();');

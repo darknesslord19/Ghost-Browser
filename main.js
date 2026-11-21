@@ -636,7 +636,7 @@ app.whenReady().then(async () => {
   adblock.enabled = settings.get().adblock; adblock.setCustom(settings.get().customBlockHosts);
   setupSession();
 
-  win = new BaseWindow({ width: 1360, height: 840, minWidth: 820, minHeight: 520, backgroundColor: '#0b0b10', title: 'Ghost Browser', autoHideMenuBar: true });
+  win = new BaseWindow({ width: 1360, height: 840, minWidth: 820, minHeight: 520, backgroundColor: '#0b0b10', title: 'Ghost Browser', icon: path.join(PAGES, 'icon512.png'), autoHideMenuBar: true });
   Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'editMenu' }]));
   ui = new WebContentsView({ webPreferences: { preload: path.join(__dirname, 'preload-ui.js'), sandbox: true, contextIsolation: true } });
   ui.setBackgroundColor('#00000000');
