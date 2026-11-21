@@ -68,10 +68,13 @@ class MainActivity : Activity() {
         val IMG_RE = Regex("\\.(jpe?g|png|webp|gif|svg|ts|m4s|vtt|srt|css|js)(\\?|#|\$)", RegexOption.IGNORE_CASE)
         val MEDIA_RE = Regex("\\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\\?|#|\$)|m3u8|videoplayback", RegexOption.IGNORE_CASE)
         val SNIFF_JS = """(()=>{if(window.__gs)return;window.__gs=1;const seen=new Set();
-const ok=u=>!/\.(jpe?g|png|webp|gif|svg|ts|m4s|vtt|srt|css|js)(\?|#|${'$'})/i.test(u)&&(/\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\?|#|${'$'})/i.test(u)||/m3u8|videoplayback/i.test(u));
-const send=u=>{try{if(!u||typeof u!=='string')return;u=new URL(u,location.href).href;if(!/^https?:/.test(u)||seen.has(u)||!ok(u))return;seen.add(u);GhostSniff.postMessage(JSON.stringify({u:u,r:location.href}))}catch(e){}};
-const of=window.fetch;if(of)window.fetch=function(a){try{send(typeof a==='string'?a:a&&a.url)}catch(e){}return of.apply(this,arguments)};
-const xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{send(String(u))}catch(e){}return xo.apply(this,arguments)};
+const bad=u=>/\.(jpe?g|png|webp|gif|svg|ts|m4s|vtt|srt|css|js)(\?|#|${'$'})/i.test(u);
+const ok=u=>!bad(u)&&(/\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\?|#|${'$'})/i.test(u)||/m3u8|videoplayback/i.test(u));
+const send=(u,f,mst)=>{try{if(!u||typeof u!=='string')return;u=new URL(u,location.href).href;if(!/^https?:/.test(u)||seen.has(u)||(!f&&!ok(u)))return;seen.add(u);GhostSniff.postMessage(JSON.stringify({u:u,r:location.href,m:mst?1:0}))}catch(e){}};
+const head=t=>{t=t.trim();return t.indexOf('#EXTM3U')==0?(t.indexOf('#EXT-X-STREAM-INF')>0?2:1):0};
+const chk=(u,r)=>{try{const rd=r.clone().body.getReader();rd.read().then(a=>{try{rd.cancel()}catch(e){}if(a.value){const k=head(new TextDecoder().decode(a.value.subarray(0,4096)));if(k)send(u,1,k==2)}}).catch(()=>{})}catch(e){}};
+const of=window.fetch;if(of)window.fetch=function(a){const u=typeof a==='string'?a:a&&a.url;try{send(u)}catch(e){}const p=of.apply(this,arguments);try{p.then(r=>{if(r&&r.ok&&r.body)chk(r.url||u,r)}).catch(()=>{})}catch(e){}return p};
+const xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{const U=String(u);send(U);this.addEventListener('load',()=>{try{let t='';if(this.responseType===''||this.responseType==='text')t=(this.responseText||'').slice(0,4096);else if(this.responseType==='arraybuffer'&&this.response)t=new TextDecoder().decode(new Uint8Array(this.response,0,Math.min(4096,this.response.byteLength)));const k=head(t);if(k)send(U,1,k==2)}catch(e){}})}catch(e){}return xo.apply(this,arguments)};
 const scan=()=>{try{document.querySelectorAll('video,source').forEach(e=>{send(e.currentSrc);send(e.src);send(e.getAttribute('src'))})}catch(e){}};
 setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
 })();"""
@@ -788,7 +791,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 WebViewCompat.addWebMessageListener(wv, "GhostSniff", setOf("*")) { _, message, _, _, _ ->
                     try {
                         val o = JSONObject(message.data ?: "")
-                        if (!tab.isPlayer && !tab.isInternal) sniff(tab, o.optString("u"), o.optString("r"))
+                        if (!tab.isPlayer && !tab.isInternal) sniff(tab, o.optString("u"), o.optString("r"), o.optInt("m") == 1)
                     } catch (_: Exception) {}
                 }
                 WebViewCompat.addDocumentStartJavaScript(wv, SNIFF_JS, setOf("*"))
@@ -959,11 +962,12 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         bar.visibility = View.VISIBLE
     }
 
-    private fun sniff(tab: Tab, url: String, ref: String = "") {
-        if (url.isEmpty() || IMG_RE.containsMatchIn(url)) return
+    private fun sniff(tab: Tab, url: String, ref: String = "", master: Boolean = false) {
+        if (url.isEmpty()) return
         main.post {
             if (tab.media.any { it.url == url }) return@post
-            tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (url.contains("m3u8", true)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video"))
+            tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (master) "HLS ★" else if (url.contains("m3u8", true) || ref.isNotEmpty() && !MEDIA_RE.containsMatchIn(url)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video"))
+            tab.media.sortBy { if (it.kind == "HLS ★") 0 else 1 }
             while (tab.media.size > 15) tab.media.removeAt(tab.media.size - 1)
             if (tab === cur) { updateUi(); askPlayer(tab) }
         }
