@@ -1,0 +1,70 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'pages/**'
+      - 'lib/**'
+      - 'sites.default.json'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: hls.js indir
+        run: |
+          mkdir /tmp/hls && cd /tmp/hls && npm init -y >/dev/null && npm i hls.js@1.5.17 >/dev/null
+          cp node_modules/hls.js/dist/hls.min.js "$GITHUB_WORKSPACE/hls.min.js"
+
+      - name: Web sayfalarını Android assets'e hazırla
+        run: node android/scripts/prepare-assets.js hls.min.js
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: APK derle (imzasız release)
+        run: gradle -p android assembleRelease --no-daemon --stacktrace
+
+      - name: Hizala ve imzala (android-signing/testkey)
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          UNS=android/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/zipalign" -p -f 4 "$UNS" aligned.apk
+          "$BT/apksigner" sign --key android-signing/testkey.pk8 --cert android-signing/testkey.x509.pem --out Ghost-Browser.apk aligned.apk
+          "$BT/apksigner" verify --verbose Ghost-Browser.apk
+          ls -la Ghost-Browser.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ghost-Browser-apk
+          path: Ghost-Browser.apk
+
+      - name: Release (android-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Ghost Browser Android (son sürüm)
+          body: |
+            Ghost Browser Android APK. Android 7.0+ ve Android TV.
+            Kurulum: APK'yı indir, "Bilinmeyen kaynaklardan yüklemeye izin ver" aç, yükle.
+            Not: AOSP herkese açık test anahtarıyla imzalıdır.
+          files: Ghost-Browser.apk

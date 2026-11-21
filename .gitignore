@@ -2,3 +2,9 @@ node_modules/
 dist/
 pages/vendor/
 *.log
+android/app/src/main/assets/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+hls.min.js
