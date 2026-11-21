@@ -6,7 +6,7 @@ import android.app.DownloadManager
 import android.app.UiModeManager
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.ColorStateList
+import android.content.res.ColorStateList
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
