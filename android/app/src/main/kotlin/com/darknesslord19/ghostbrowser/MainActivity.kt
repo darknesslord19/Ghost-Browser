@@ -262,9 +262,9 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
     }
 
     // ================= arayüz (telefon + TV uyumlu) =================
-    private val cBar = Color.parseColor("#14141D")
+    private var cBar = Color.parseColor("#14141D")
     private val cPill = Color.parseColor("#25253A")
-    private val cAcc = Color.parseColor("#8B5CF6")
+    private var cAcc = Color.parseColor("#8B5CF6")
     private val cDim = Color.parseColor("#9A9AB2")
 
     /** TV'de ya da TV modu açıkken arayüz büyür. */
@@ -302,7 +302,25 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         return v
     }
 
+    private fun loadNativeTheme() {
+        try {
+            val b = store.str("themeBar")
+            val a = store.str("themeAcc")
+            if (b.isNotEmpty()) cBar = Color.parseColor(b)
+            if (a.isNotEmpty()) cAcc = Color.parseColor(a)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun applyNativeTheme() {
+        loadNativeTheme()
+        window.statusBarColor = cBar
+        bar.setBackgroundColor(cBar)
+        progress.progressTintList = ColorStateList.valueOf(cAcc)
+    }
+
     private fun buildUi() {
+        loadNativeTheme()
         window.statusBarColor = cBar
         window.navigationBarColor = Color.parseColor("#0B0B10")
         val root = LinearLayout(this)
@@ -1270,6 +1288,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                     val oldEn = store.bool("remoteEnabled")
                     val oldFl = store.str("filterListUrl")
                     store.patch(args.optJSONObject(0) ?: JSONObject())
+                    if (args.optJSONObject(0)?.has("themeBar") == true) applyNativeTheme()
                     adblock.enabled = store.bool("adblock")
                     adblock.setCustom(store.arr("customBlockHosts"))
                     applyMode()

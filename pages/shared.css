@@ -8,14 +8,14 @@
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt); font: 15px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; border: 0; background: var(--bg3); border-radius: 10px; padding: 8px 14px; transition: background .15s, transform .1s; }
-button:hover { background: #2a2a3d; }
+button:hover { background: color-mix(in srgb, var(--bg3) 82%, white); }
 button:active { transform: scale(.97); }
 button.primary { background: var(--grad); color: #fff; font-weight: 600; }
 button.danger { background: #3a1a24; color: var(--bad); }
 input[type=text], input[type=url], input[type=number], input[type=search], select, textarea {
   background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; outline: none; width: 100%;
 }
-input:focus, select:focus, textarea:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(139, 92, 246, .25); }
+input:focus, select:focus, textarea:focus { border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 25%, transparent); }
 :focus-visible { outline: 3px solid var(--acc2); outline-offset: 2px; }
 a { color: #c4b5fd; }
 ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-thumb { background: #2f2f45; border-radius: 6px; } ::-webkit-scrollbar-track { background: transparent; }

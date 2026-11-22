@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><title>Ghost Oynatıcı</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="ghost://static/shared.css">
+<link rel="stylesheet" href="ghost://static/shared.css"><script src="ghost://static/theme.js"></script>
 <style>
 html, body { background: #000; overflow: hidden; user-select: none; }
 #stage { position: fixed; inset: 0; background: #000; }
@@ -29,9 +29,9 @@ video { width: 100%; height: 100%; object-fit: contain; background: #000; displa
 .b svg { display: block; filter: drop-shadow(0 1px 2px #0008); }
 .b:hover { background: linear-gradient(#ffffff33, #ffffff14); border-color: #ffffff44; transform: translateY(-1px); }
 .b:active { transform: scale(.92); }
-.b:focus-visible { outline: none; border-color: #c4b5fd; box-shadow: 0 0 0 3px #8b5cf688, 0 4px 14px #0007; }
-.b.on { background: linear-gradient(#8b5cf6, #6d3fe0); border-color: #c4b5fd88; box-shadow: 0 4px 16px #8b5cf688, inset 0 1px 0 #ffffff44; }
-#bPlay { width: 56px; height: 56px; font-size: 28px; background: var(--grad); border: 0; box-shadow: 0 6px 22px #8b5cf6aa, inset 0 1px 0 #ffffff55; }
+.b:focus-visible { outline: none; border-color: #c4b5fd; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 53%, transparent), 0 4px 14px #0007; }
+.b.on { background: linear-gradient(var(--acc), #6d3fe0); border-color: #c4b5fd88; box-shadow: 0 4px 16px color-mix(in srgb, var(--acc) 53%, transparent), inset 0 1px 0 #ffffff44; }
+#bPlay { width: 56px; height: 56px; font-size: 28px; background: var(--grad); border: 0; box-shadow: 0 6px 22px color-mix(in srgb, var(--acc) 67%, transparent), inset 0 1px 0 #ffffff55; }
 #bPlay:hover { background: var(--grad); filter: brightness(1.1); transform: translateY(-1px) scale(1.04); }
 .b.txt { width: auto; padding: 0 16px; border-radius: 23px; font-size: 14px; font-weight: 700; letter-spacing: .02em; }
 #time { font-size: 14px; margin: 0 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -40,7 +40,7 @@ video { width: 100%; height: 100%; object-fit: contain; background: #000; displa
 #center { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 #fx { font-size: 54px; color: #fff; backdrop-filter: blur(10px); background: #000a; border-radius: 50%; width: 110px; height: 110px; display: grid; place-items: center; opacity: 0; transform: scale(.8); transition: opacity .35s, transform .35s; }
 #fx.show { opacity: 1; transform: scale(1); transition: none; }
-#spin { position: absolute; width: 64px; height: 64px; border: 5px solid #ffffff30; border-top-color: #ec4899; border-radius: 50%; animation: sp .8s linear infinite; display: none; }
+#spin { position: absolute; width: 64px; height: 64px; border: 5px solid #ffffff30; border-top-color: var(--acc2); border-radius: 50%; animation: sp .8s linear infinite; display: none; }
 @keyframes sp { to { transform: rotate(360deg); } }
 #panel { position: absolute; right: 20px; bottom: 90px; width: 300px; max-height: 60vh; overflow-y: auto; background: #14141df2; border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: none; backdrop-filter: blur(10px); }
 #panel h4 { margin: 10px 0 6px; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; } #panel h4:first-child { margin-top: 0; }
@@ -53,7 +53,7 @@ video { width: 100%; height: 100%; object-fit: contain; background: #000; displa
 #open form { width: min(640px, 90vw); text-align: center; } #open h1 { font-size: 34px; margin: 0 0 6px; } #open input { height: 52px; border-radius: 26px; padding: 0 22px; font-size: 16px; margin: 16px 0; }
 #toast { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); background: #000c; padding: 8px 16px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; }
 #toast.show { opacity: 1; }
-#drop { position: absolute; inset: 14px; border: 3px dashed var(--acc); border-radius: 18px; display: none; place-items: center; font-size: 22px; background: #8b5cf622; pointer-events: none; }
+#drop { position: absolute; inset: 14px; border: 3px dashed var(--acc); border-radius: 18px; display: none; place-items: center; font-size: 22px; background: color-mix(in srgb, var(--acc) 13%, transparent); pointer-events: none; }
 @media (max-width:700px){
   #bFit,#bPip,.vwrap #vol{display:none}
   #ctrl{padding:34px 12px 10px}
