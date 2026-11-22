@@ -158,7 +158,7 @@ body.lay-step .ccat.busy .cic { background: color-mix(in srgb, var(--acc) 20%, t
 #qr { background: #fff; border-radius: 12px; padding: 6px; width: 220px; height: 220px; image-rendering: pixelated; }
 textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 13px; }
 .stat { display: inline-block; margin-right: 24px; } .stat b { font-size: 26px; display: block; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-#msg { position: fixed; right: 20px; bottom: 20px; background: var(--bg3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; display: none; }
+#msg { position: fixed; right: 20px; bottom: 96px; z-index: 2147483647; max-width: min(92vw, 520px); background: #1b1b29 !important; color: #fff !important; backdrop-filter: none; isolation: isolate; border: 1px solid var(--acc, #8ab4ff); border-radius: 14px; padding: 14px 18px; font-size: 15px; font-weight: 600; line-height: 1.35; word-break: break-all; box-shadow: 0 8px 28px rgba(0,0,0,.65), 0 0 0 9999px rgba(0,0,0,0); opacity: 1; display: none; }
 @media (max-width:720px){
   body{flex-direction:column;height:100dvh}
   nav{width:auto;flex:none;border-right:0;border-bottom:1px solid var(--line);padding:6px 8px;display:flex;overflow-x:auto;gap:4px;white-space:nowrap;-webkit-overflow-scrolling:touch}
@@ -178,7 +178,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   nav{scrollbar-width:none;background:var(--bg2);gap:6px}
   nav a{background:var(--bg3);border:1px solid var(--line);color:var(--dim)}
   nav a.on{background:var(--grad);border-color:transparent;color:#fff;font-weight:600}
-  #msg{left:14px;right:14px;bottom:14px;text-align:center}
+  #msg{left:14px;right:14px;bottom:96px;text-align:center}
 }
 </style></head>
 <body data-spatial>
@@ -428,7 +428,7 @@ function enhanceSelect(sel) {
 </script>
 <script>
 const $ = (s) => document.querySelector(s); let S = {}, ipIdx = 0, rinfo = null;
-const msg = (t) => { const m = $('#msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(msg._t); msg._t = setTimeout(() => m.style.display = 'none', 2600); };
+const msg = (t) => { const m = $('#msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(msg._t); msg._t = setTimeout(() => m.style.display = 'none', Math.min(8000, 2600 + t.length * 40)); };
 const set = (p) => ghost.invoke('set', p).then(s => { S = s; });
 const SOLO = /[?&]only=crawler/.test(location.search); if (SOLO) document.body.classList.add('solo');
 function nav() { const h = SOLO ? 'crawler' : (location.hash || '#genel').slice(1); document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === h)); document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + h)); if (h === 'history') loadHistory(); if (h === 'links') loadLinks(); if (h === 'crawler') loadCrawler(); if (h === 'adblock') loadAd(); if (h === 'remote') loadRemote(); if (h === 'siteler') loadSites(); }
