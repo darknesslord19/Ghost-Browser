@@ -333,7 +333,8 @@ function renderCrawler(sum, running) {
         body.innerHTML = ''; const fl = await ghost.invoke('crawl-films', s.host, c.url); let shown = 0;
         const bt = document.createElement('div'); bt.className = 'ctool';
         bt.append(cBtn('Bu kategoriyi tara', async () => { const r = await ghost.invoke('crawl-list', s.host, [c.url], +pg.value); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
-          cBtn('Videoları çöz', async () => { const r = await ghost.invoke('crawl-resolve', s.host, [c.url], +lim.value); if (r) msg(r); cLastSig = ''; refreshCrawler(); }, 'primary'));
+          cBtn('Videoları çöz', async () => { const r = await ghost.invoke('crawl-resolve', s.host, [c.url], +lim.value); if (r) msg(r); cLastSig = ''; refreshCrawler(); }, 'primary'),
+          cBtn('Tanı kopyala', async () => { const t = await ghost.invoke('crawl-log', s.host, c.url); msg(await copyText(c.url + '\\n' + t) ? 'Tanı kopyalandı' : 'Kopyalanamadı'); }));
         body.append(bt);
         const more = () => { fl.slice(shown, shown + 150).forEach(f => body.insertBefore(filmRow(f), moreBtn)); shown = Math.min(fl.length, shown + 150); moreBtn.style.display = shown < fl.length ? '' : 'none'; moreBtn.textContent = 'Daha fazla (' + (fl.length - shown) + ')'; };
         const moreBtn = cBtn('Daha fazla', more); moreBtn.style.margin = '8px 12px'; body.append(moreBtn);

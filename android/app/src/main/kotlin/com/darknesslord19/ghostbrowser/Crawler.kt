@@ -292,15 +292,40 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             load(url, g) { extract() }
         }
 
+        fun log(s: String) {
+            val cc = cat ?: return
+            val old = cc.optString("log")
+            cc.put("log", (old + "\n" + s).takeLast(3000))
+        }
+
+        /** Sayfayı sonuna kadar kaydırır (sonsuz kaydırma / geç yüklenen kartlar), kart sayısı artmayı bırakınca film kartlarını çıkarır. */
         fun extract() {
-            status = label()
-            evalJs(SCROLL_JS, g) {
-                step(700, g) {
-                    evalJs(SCROLL_JS, g) {
-                        step(700, g) { evalJs(LIST_JS, g) { r -> process(r) } }
-                    }
+            val maxRounds = if (j.n >= 200) 3000 else j.n * 25
+            var stale = 0
+            var best = -1
+            var rounds = 0
+            var grew = false
+
+            fun tick() {
+                evalJs(SCROLL_JS, g) { r ->
+                    val cnt = r?.toIntOrNull() ?: 0
+                    rounds++
+                    if (cnt > best) {
+                        if (best >= 0) grew = true
+                        best = cnt
+                        stale = 0
+                    } else stale++
+                    val cc = cat
+                    status = prefix() + (cc?.optString("name") ?: "") + " · kaydırılıyor · " + cnt + " kart"
+                    val enough = stale >= (if (grew) 4 else 2)
+                    if (enough || rounds >= maxRounds) {
+                        log("scroll rounds=$rounds cards=$cnt")
+                        evalJs(LIST_JS, g) { x -> process(x) }
+                    } else step(1100, g) { tick() }
                 }
             }
+            status = label()
+            tick()
         }
 
         fun finish(complete: Boolean, next: String) {
@@ -334,6 +359,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             } catch (_: Exception) {
             }
             pages++
+            log("p$pages url=" + url.takeLast(60) + " films=" + films.length() + " added=$added next=" + next.takeLast(60) + " last=$last nc=$nc")
             cc.put("pages", cc.optInt("pages") + 1)
             if (last > cc.optInt("totalPages")) cc.put("totalPages", last)
             schedule()
@@ -567,6 +593,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         return out
     }
 
+    fun log(h: String, url: String): String = findCat(h, url)?.optString("log") ?: ""
+
     fun films(h: String, url: String): JSONArray = findCat(h, url)?.optJSONArray("films") ?: JSONArray()
 
     fun remove(h: String) {
@@ -724,7 +752,7 @@ const arr=[...out.values()].sort((a,b)=>b.s-a.s).slice(0,150);
 return JSON.stringify({title:document.title,list:arr});
 }catch(e){return JSON.stringify({title:'',list:[]})}})()"""
 
-        const val SCROLL_JS = "(()=>{window.scrollTo(0,document.body.scrollHeight);return '1'})()"
+        const val SCROLL_JS = "(()=>{const h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);window.scrollTo(0,Math.max(0,h-1500));window.scrollTo(0,h);return String(document.querySelectorAll('a img').length)})()"
 
         private const val NEXT_FINDER = """
 const abs=h=>{try{const u=new URL(h,location.href);u.hash='';return u.href}catch(e){return ''}};

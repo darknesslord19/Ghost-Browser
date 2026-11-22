@@ -1283,6 +1283,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-state" -> reply(true, crawler.stateJson())
                 "crawl-sites" -> reply(true, crawler.summary())
                 "crawl-films" -> reply(true, crawler.films(args.optString(0), args.optString(1)))
+                "crawl-log" -> reply(true, crawler.log(args.optString(0), args.optString(1)))
                 "crawl-discover" -> reply(true, crawler.discover(args.optString(0)))
                 "crawl-addcat" -> reply(true, crawler.addCat(args.optString(0), args.optString(1), args.optString(2)))
                 "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
