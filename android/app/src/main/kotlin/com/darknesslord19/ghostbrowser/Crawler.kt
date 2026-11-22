@@ -695,6 +695,28 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     var waited = 0
 
                     fun fail() {
+                        if (!f.optBoolean("okTried")) {
+                            f.put("okTried", true)
+                            evalJs(OK_FRAME_JS, g) { ou ->
+                                val okUrl = (ou ?: "").trim().trim('"')
+                                if (okUrl.startsWith("http")) {
+                                    load(okUrl, g) {
+                                        step(800, g) {
+                                            evalJs(OK_EXTRACT_JS, g) { vr ->
+                                                val v = (vr ?: "").trim().trim('"')
+                                                if (v.startsWith("http")) {
+                                                    f.put("video", v).put("videoRef", "https://ok.ru/").put("videoTime", System.currentTimeMillis()).put("tried", 0)
+                                                    noteRes(f.optString("url"), v, 1)
+                                                    schedule()
+                                                    step(80, g) { nextFilm() }
+                                                } else fail()
+                                            }
+                                        }
+                                    }
+                                } else fail()
+                            }
+                            return
+                        }
                         evalJs(DIAG_JS, g) { d -> cat.put("log", (cat.optString("log") + "\nçözülemedi: " + f.optString("url").takeLast(40) + " " + (d ?: "")).takeLast(3000)) }
                         if (f.optInt("tried") == 0) {
                             f.put("tried", 1)
@@ -1440,6 +1462,8 @@ return '1'})()"""
         /** Oynat düğmesine basar, oynatıcı alanının merkez koordinatını döndürür. */
         val DIAG2_JS = """(()=>{try{return JSON.stringify({u:location.href,t:document.title,i:[...document.querySelectorAll('iframe')].map(f=>(f.src||'').slice(0,200)).slice(0,5),gr:(window.__gr||[]).slice(-40).map(x=>String(x).slice(0,160)),txt:(document.body?document.body.innerText.replace(/\s+/g,' ').slice(0,300):''),v:document.querySelectorAll('video').length})}catch(e){return ''}})()"""
 
+        val OK_FRAME_JS = """(()=>{try{const f=[...document.querySelectorAll('iframe')].map(x=>x.src||x.getAttribute('data-src')||'').find(s=>/ok\.ru\/video/.test(s));return f||''}catch(e){return ''}})()"""
+        val OK_EXTRACT_JS = """(()=>{try{const e=document.querySelector('[data-module=OKVideo]');const o=JSON.parse(e.getAttribute('data-options'));let m=o.flashvars.metadata;if(typeof m==='string')m=JSON.parse(m);if(m.hlsManifestUrl)return m.hlsManifestUrl;const v=(m.videos||[]).filter(x=>x.url);return v.length?v[v.length-1].url:''}catch(e){return ''}})()"""
         val DIAG_JS = """(()=>{try{const t=document.body?document.body.innerText.replace(/\s+/g,' ').slice(0,90):'';return JSON.stringify({i:[...document.querySelectorAll('iframe')].map(f=>(f.src||'').slice(0,70)).slice(0,3),pre:(document.querySelector('[data-dp-preroll]')||{getAttribute(){return ''}}).getAttribute('data-dp-preroll'),v:document.querySelectorAll('video').length,t:t})}catch(e){return ''}})()"""
 
         val CLICK_JS = """(()=>{try{
