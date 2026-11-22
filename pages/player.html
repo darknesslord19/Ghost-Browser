@@ -88,6 +88,7 @@ video { width: 100%; height: 100%; object-fit: contain; background: #000; displa
       <button class="b" id="bSet" title="Ayarlar / kalite / altyazı">⚙</button>
       <button class="b" id="bFit" title="Görüntü oranı">▭</button>
       <button class="b" id="bPip" title="Resim içinde resim (P)">⧉</button>
+      <button class="b" id="bCopy" title="Video bağlantısını kopyala">x</button>
       <button class="b" id="bFs" title="Tam ekran (F)">⛶</button>
     </div>
   </div>
@@ -112,11 +113,13 @@ const IC = {
   set: svg('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>'),
   fit: svg('<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M7 10v4M17 10v4"/>'),
   pip: svg('<rect x="3" y="5" width="18" height="14" rx="3"/><rect x="12" y="11" width="7" height="5" rx="1.5" fill="currentColor"/>'),
+  link: svg('<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>'),
+  check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
   fs: svg('<path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/>'),
   fsx: svg('<path d="M9 4v4a1 1 0 0 1-1 1H4M15 4v4a1 1 0 0 0 1 1h4M9 20v-4a1 1 0 0 0-1-1H4M15 20v-4a1 1 0 0 1 1-1h4"/>')
 };
 const setIc = (sel, k) => { const e = document.querySelector(sel); if (e) e.innerHTML = IC[k]; };
-[['#bPlay','play'],['#bBack','back'],['#bFwd','fwd'],['#bMute','vol'],['#bCC','cc'],['#bSet','set'],['#bFit','fit'],['#bPip','pip'],['#bFs','fs']].forEach(a => setIc(a[0], a[1]));
+[['#bPlay','play'],['#bBack','back'],['#bFwd','fwd'],['#bMute','vol'],['#bCC','cc'],['#bSet','set'],['#bFit','fit'],['#bPip','pip'],['#bCopy','link'],['#bFs','fs']].forEach(a => setIc(a[0], a[1]));
 const P = new URLSearchParams(location.search);
 const SRC = P.get('src') || '', TITLE = P.get('title') || '', REF = P.get('ref') || '', SUBURL = P.get('sub') || '';
 const store = { get: (k, d) => { try { const x = localStorage.getItem(k); return x === null ? d : JSON.parse(x); } catch { return d; } }, set: (k, x) => { try { localStorage.setItem(k, JSON.stringify(x)); } catch {} } };
@@ -233,6 +236,13 @@ v.addEventListener('wheel', (e) => { e.preventDefault(); vol(e.deltaY < 0 ? .05 
 $('#bPlay').onclick = toggle; $('#bBack').onclick = () => seek(-10); $('#bFwd').onclick = () => seek(10);
 $('#bMute').onclick = () => { v.muted = !v.muted; }; $('#vol').oninput = (e) => { v.muted = false; v.volume = +e.target.value; };
 $('#bFs').onclick = fullscreen;
+$('#bCopy').onclick = async () => {
+  const t = SRC; let ok = false;
+  try { await navigator.clipboard.writeText(t); ok = true; } catch (e) {}
+  if (!ok) { try { const a = document.createElement('textarea'); a.value = t; a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select(); ok = document.execCommand('copy'); a.remove(); } catch (e) {} }
+  if (ok) { setIc('#bCopy', 'check'); setTimeout(() => setIc('#bCopy', 'link'), 1500); }
+  toast(ok ? 'Video bağlantısı kopyalandı' : 'Kopyalanamadı');
+};
 $('#bPip').onclick = () => { document.pictureInPictureElement ? document.exitPictureInPicture() : v.requestPictureInPicture && v.requestPictureInPicture().catch(() => toast('PiP desteklenmiyor')); };
 $('#bFit').onclick = () => { fit = (fit + 1) % 3; v.style.objectFit = ['contain', 'cover', 'fill'][fit]; toast(['Sığdır', 'Kırp (doldur)', 'Uzat'][fit]); };
 $('#bSpeed').onclick = () => { const r = [.5, .75, 1, 1.25, 1.5, 2]; v.playbackRate = r[(r.findIndex(x => x >= v.playbackRate - .001) + 1) % r.length]; };
