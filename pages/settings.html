@@ -662,13 +662,20 @@ $('#lClear').onclick = async () => { if (await confirmBox('Tüm video kayıtlar�
 $('#hClear').onclick = async () => { if (await confirmBox('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
 
 $('#dots').onclick = async () => {
-  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['gh', 'GitHub aktarımı'], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
+  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['gh', 'GitHub aktarımı'], ['rl', 'Cloude bağlantısı'], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
   if (v === 'tmdb') {
     const k = await promptBox('TMDB API anahtarı (boş bırakırsan silinir). Anahtar girersen ad, afiş, yıl ve puan TMDB\'den gelir. Ücretsiz anahtar: themoviedb.org → Ayarlar → API', cKey);
     if (k === null) return; $('#tKey').value = k; $('#tSave').click();
   } else if (v === 'theme') { await themeModal();
   } else if (v === 'imp') { await importModal();
   } else if (v === 'gh') { await githubModal();
+  } else if (v === 'rl') {
+    let cfg = {}; try { cfg = await ghost.invoke('settings'); } catch (e) {}
+    let st = ''; try { st = await ghost.invoke('relay-status'); } catch (e) {}
+    const k = await promptBox('Cloude Browser bağlantı adresi (…/mcp/ANAHTAR). Yapıştır ve kaydet; Claude bu tarayıcıyı uzaktan kullanabilir. Boş bırakırsan bağlantı kesilir. Adres yalnızca bu cihazda saklanır. Durum: ' + (st || 'Kapalı'), cfg.relayLink || '');
+    if (k === null) return;
+    await ghost.invoke('set', { relayLink: k.trim() });
+    setTimeout(async () => { try { msg('Cloude: ' + await ghost.invoke('relay-status')); } catch (e) {} }, 3500);
   } else if (v === 'lay') { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l);
   } else if (v === 'fx') {
     const m = await pickModal('Süsleme', FX.MODES, FX.mode()); if (m !== null) FX.setMode(m);

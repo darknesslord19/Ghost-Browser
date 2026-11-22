@@ -76,7 +76,7 @@ class Store(ctx: Context, isTv: Boolean) {
                 "theme" -> settings.put(k, p.optString(k).take(60))
                 "themeBar", "themeAcc", "themeBg", "themeBg3", "themeLine", "themeTxt", "themeDim" -> if (Regex("#[0-9a-fA-F]{6}").matches(p.optString(k))) settings.put(k, p.optString(k))
                 "tmdbKey" -> settings.put(k, p.optString(k).trim().take(400))
-                "githubRepo", "githubToken", "githubPath", "githubBranch" -> settings.put(k, p.optString(k).trim().take(300))
+                "githubRepo", "githubToken", "githubPath", "githubBranch", "relayLink" -> settings.put(k, p.optString(k).trim().take(300))
                 "githubAuto", "diag" -> settings.put(k, p.optBoolean(k))
                 "adblock", "popupBlock", "cosmetic", "tvMode", "remoteEnabled", "askPlayer" -> settings.put(k, p.optBoolean(k))
                 "remotePort" -> settings.put(k, p.optDouble(k, 8421.0).toInt().coerceIn(1024, 65000))

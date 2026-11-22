@@ -92,6 +92,36 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
     private lateinit var ua: String
 
     private val main = Handler(Looper.getMainLooper())
+    private val relay: Relay by lazy {
+        Relay(object : RelayApi {
+            override fun link(): String = store.str("relayLink")
+            override fun <T> ui(block: () -> T): T {
+                val latch = java.util.concurrent.CountDownLatch(1)
+                var result: Any? = null
+                var failure: Throwable? = null
+                runOnUiThread {
+                    try { result = block() } catch (t: Throwable) { failure = t }
+                    latch.countDown()
+                }
+                if (!latch.await(15, java.util.concurrent.TimeUnit.SECONDS)) throw RuntimeException("Arayüz yanıt vermedi")
+                failure?.let { throw it }
+                @Suppress("UNCHECKED_CAST")
+                return result as T
+            }
+            override fun tabs(): List<Tab> = ArrayList(tabs)
+            override fun current(): Tab? = cur
+            override fun open(url: String, newTab: Boolean): Tab {
+                val c = cur
+                return if (newTab || c == null) newTab(url) else { loadIn(c, url); c }
+            }
+            override fun select(i: Int) { if (i in tabs.indices) switchTo(tabs[i]) }
+            override fun close(i: Int) { if (i in tabs.indices) closeTab(tabs[i]) }
+            override fun back(): Boolean {
+                val w = cur?.webView ?: return false
+                return if (w.canGoBack()) { w.goBack(); true } else false
+            }
+        })
+    }
     private val exec = Executors.newCachedThreadPool()
     private val tabs = ArrayList<Tab>()
     private var cur: Tab? = null
@@ -248,6 +278,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
 
     override fun onResume() {
         super.onResume()
+        try { relay.start() } catch (_: Exception) {}
         cur?.webView?.onResume()
     }
 
@@ -1393,6 +1424,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
                 "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
                 "crawl-fresh" -> reply(true, crawler.fresh(args.optString(0), args.optString(1), args.optString(2)) && crawler.resolve(args.optString(0), JSONArray().put(args.optString(1)), 1).isNotEmpty())
+                "relay-status" -> reply(true, relay.status)
                 "crawl-github" -> reply(true, crawler.githubSync(args.optString(0)))
                 "clipboard-read" -> reply(true, try {
                     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
