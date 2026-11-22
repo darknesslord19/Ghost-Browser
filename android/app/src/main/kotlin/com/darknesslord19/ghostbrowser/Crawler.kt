@@ -1445,7 +1445,7 @@ for(const s of sel){const e=document.querySelector(s);if(e&&e.offsetParent!==nul
 document.querySelectorAll('video').forEach(v=>{try{v.muted=true;v.play()}catch(x){}});
 window.scrollTo(0,0);
 let best=null,ba=0;
-for(const e of document.querySelectorAll('[data-preroll-slot],iframe,video,[class*=player],[id*=player]')){const r=e.getBoundingClientRect();const a=r.width*r.height;if(a>ba&&r.width>150&&r.height>100&&r.top<innerHeight&&r.left<innerWidth){ba=a;best=r}}
+for(const q of ['[data-preroll-slot],iframe,video','[class*=player],[id*=player]']){for(const e of document.querySelectorAll(q)){const r=e.getBoundingClientRect();const a=r.width*r.height;if(a>ba&&r.width>150&&r.height>100&&r.top<innerHeight&&r.left<innerWidth){ba=a;best=r}}if(best)break}
 if(!best)return JSON.stringify(null);
 return JSON.stringify({x:Math.min(best.left+best.width/2,innerWidth-5),y:Math.min(best.top+best.height/2,innerHeight-5)});
 }catch(e){return JSON.stringify(null)}})()"""
