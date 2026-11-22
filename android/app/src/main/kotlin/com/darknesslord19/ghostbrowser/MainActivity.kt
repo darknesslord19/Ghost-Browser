@@ -1389,6 +1389,10 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
                 "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
                 "crawl-github" -> reply(true, crawler.githubSync(args.optString(0)))
+                "clipboard-read" -> reply(true, try {
+                    val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString() ?: ""
+                } catch (_: Exception) { "" })
                 "crawl-retry" -> reply(true, crawler.retry(args.optString(0), args.optString(1), args.optJSONArray(2) ?: JSONArray()))
                 "crawl-enrich" -> reply(true, crawler.enrich(args.optString(0), args.optJSONArray(1) ?: JSONArray(), store.str("tmdbKey")))
                 "crawl-stop" -> { crawler.stop(); crawler.stopEnrich(); reply(true, true) }

@@ -279,7 +279,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 <div class="mback" id="mback"><div class="mbox" id="mbox"></div></div>
 <script>
 const mb = () => $('#mback'), mx = () => $('#mbox');
-function mOpen(build) { return new Promise(res => { const b = mx(); b.innerHTML = ''; const close = (v) => { mb().classList.remove('on'); res(v); }; build(b, close); mb().classList.add('on'); mb().onclick = (e) => { if (e.target === mb()) close(null); }; }); }
+function mOpen(build) { return new Promise(res => { const b = mx(); b.innerHTML = ''; const close = (v) => { mb().classList.remove('on'); res(v); }; build(b, close); pasteAll(b); mb().classList.add('on'); mb().onclick = (e) => { if (e.target === mb()) close(null); }; }); }
 function pickModal(title, opts, cur) { return mOpen((b, close) => { if (title) { const h = document.createElement('h3'); h.textContent = title; b.append(h); } opts.forEach(o => { const d = document.createElement('div'); d.className = 'mi' + (String(o[0]) === String(cur) ? ' on' : ''); d.tabIndex = 0; d.textContent = o[1]; d.onclick = () => close(o[0]); d.onkeydown = (e) => { if (e.key === 'Enter') close(o[0]); }; b.append(d); }); }); }
 function confirmBox(text) { return mOpen((b, close) => { const p = document.createElement('div'); p.style.cssText = 'padding:8px;font-size:16px'; p.textContent = text; const r = document.createElement('div'); r.className = 'mb'; const n = document.createElement('button'); n.textContent = 'İptal'; n.onclick = () => close(false); const y = document.createElement('button'); y.textContent = 'Tamam'; y.className = 'primary'; y.onclick = () => close(true); r.append(n, y); b.append(p, r); }).then(v => !!v); }
 function promptBox(text, val) { return mOpen((b, close) => { const p = document.createElement('div'); p.style.cssText = 'padding:8px;font-size:16px'; p.textContent = text; const i = document.createElement('input'); i.type = 'text'; i.value = val || ''; i.onkeydown = (e) => { if (e.key === 'Enter') close(i.value); }; const r = document.createElement('div'); r.className = 'mb'; const n = document.createElement('button'); n.textContent = 'İptal'; n.onclick = () => close(null); const y = document.createElement('button'); y.textContent = 'Tamam'; y.className = 'primary'; y.onclick = () => close(i.value); r.append(n, y); b.append(p, i, r); setTimeout(() => i.focus(), 50); }); }
@@ -342,6 +342,19 @@ async function githubModal() {
     r.append(n, y); b.append(r);
   });
 }
+
+async function readClip() {
+  try { const t = await ghost.invoke('clipboard-read'); if (typeof t === 'string') return t; } catch (e) {}
+  try { return await navigator.clipboard.readText(); } catch (e) { return ''; }
+}
+function addPaste(el) {
+  if (el._pst || el.type === 'checkbox' || el.type === 'range' || el.id === 'q') return; el._pst = 1;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'pst'; b.textContent = '📋 Yapıştır';
+  b.style.cssText = 'height:34px;padding:0 12px;font-size:12.5px;border-radius:10px;margin:2px 0 4px;white-space:nowrap';
+  b.onclick = async () => { const t = await readClip(); if (!t) return msg('Panoda metin yok'); el.value = (el.tagName === 'TEXTAREA' && el.value ? el.value + '\n' : '') + t; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); el.focus(); };
+  if (el.tagName === 'TEXTAREA' || el.closest('.mbox')) el.after(b); else el.after(b);
+}
+function pasteAll(root) { (root || document).querySelectorAll('input[type=text],input[type=url],input[type=password],input[type=search],textarea').forEach(addPaste); }
 // <select> -> özel pencere
 function enhanceSelect(sel) {
   if (sel._enh) return; sel._enh = 1; sel.style.display = 'none';
@@ -644,6 +657,7 @@ $('#dots').onclick = async () => {
 };
 { const lb = document.getElementById('layBtn'); if (lb) { lb.textContent = layoutName(); lb.onclick = async () => { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l); }; } const gb = document.getElementById('ghBtn'); if (gb) gb.onclick = githubModal; const ib = document.getElementById('impBtn'); if (ib) ib.onclick = importModal; setLayout(ld2('gbLayout', 'default')); }
 { const tb = document.getElementById('themeBtn'); if (tb) { tb.textContent = GBTheme.current().name; tb.onclick = themeModal; } }
+pasteAll(document.querySelector('main'));
 document.querySelectorAll('select').forEach(enhanceSelect);
 init();
 </script></body></html>
