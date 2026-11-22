@@ -47,16 +47,21 @@ jobs:
       - name: Hizala ve imzala (android-signing/testkey)
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          UNS=android/app/build/outputs/apk/release/app-release-unsigned.apk
-          "$BT/zipalign" -p -f 4 "$UNS" aligned.apk
-          "$BT/apksigner" sign --key android-signing/testkey.pk8 --cert android-signing/testkey.x509.pem --out Ghost-Browser.apk aligned.apk
-          "$BT/apksigner" verify --verbose Ghost-Browser.apk
-          ls -la Ghost-Browser.apk
+          sign() {
+            "$BT/zipalign" -p -f 4 "$1" "aligned-$3.apk"
+            "$BT/apksigner" sign --key android-signing/testkey.pk8 --cert android-signing/testkey.x509.pem --out "$2" "aligned-$3.apk"
+            "$BT/apksigner" verify --verbose "$2"
+          }
+          sign android/app/build/outputs/apk/browser/release/app-browser-release-unsigned.apk Ghost-Browser.apk b
+          sign android/app/build/outputs/apk/crawler/release/app-crawler-release-unsigned.apk Ghost-Tarayici.apk c
+          ls -la *.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: Ghost-Browser-apk
-          path: Ghost-Browser.apk
+          path: |
+            Ghost-Browser.apk
+            Ghost-Tarayici.apk
 
       - name: Release (android-latest)
         uses: softprops/action-gh-release@v2
@@ -67,4 +72,6 @@ jobs:
             Ghost Browser Android APK. Android 7.0+ ve Android TV.
             Kurulum: APK'yı indir, "Bilinmeyen kaynaklardan yüklemeye izin ver" aç, yükle.
             Not: AOSP herkese açık test anahtarıyla imzalıdır.
-          files: Ghost-Browser.apk
+          files: |
+            Ghost-Browser.apk
+            Ghost-Tarayici.apk

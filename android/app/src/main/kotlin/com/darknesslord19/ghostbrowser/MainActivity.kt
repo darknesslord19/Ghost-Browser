@@ -230,7 +230,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
 
         sitesJson = computeSitesJson()
         val start = intent?.data?.toString()
-        newTab(start ?: store.str("homepage"))
+        newTab(start ?: if (BuildConfig.CRAWLER_APP) "ghost://settings#crawler" else store.str("homepage"))
         startRemote()
         refreshSites()
         exec.execute { adblock.refreshFilter(store.str("filterListUrl"), false) }

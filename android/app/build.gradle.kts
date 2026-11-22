@@ -14,6 +14,21 @@ android {
         versionCode = 1
         versionName = "1.0.0"
     }
+    buildFeatures { buildConfig = true }
+    flavorDimensions += "app"
+    productFlavors {
+        create("browser") {
+            dimension = "app"
+            manifestPlaceholders["appLabel"] = "Ghost Browser"
+            buildConfigField("boolean", "CRAWLER_APP", "false")
+        }
+        create("crawler") {
+            dimension = "app"
+            applicationId = "com.darknesslord19.ghostcrawler"
+            manifestPlaceholders["appLabel"] = "Ghost Tarayıcı"
+            buildConfigField("boolean", "CRAWLER_APP", "true")
+        }
+    }
     buildTypes {
         release { isMinifyEnabled = false }
     }
