@@ -283,7 +283,47 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             curCat = j.cat
             prog = 0
             progTotal = 0
-            page()
+            if (cc.optString("tpl").isNotEmpty()) {
+                // sitenin ajax sayfalama adresi biliniyor: sayfayı bir kez aç, sonra doğrudan istek at
+                status = label()
+                load(cc.optString("url"), g) { fetchLoop(if (cc.optBoolean("done")) 2 else cc.optInt("apage", 1) + 1) }
+            } else page()
+        }
+
+        fun addFilms(fa: JSONArray): Int {
+            var added = 0
+            for (i in 0 until fa.length()) {
+                val f = fa.getJSONObject(i)
+                val u = f.optString("u")
+                if (u.isNotEmpty() && seen.add(u)) {
+                    films.put(JSONObject().put("title", f.optString("t")).put("url", u).put("poster", f.optString("p")).put("video", "").put("videoRef", ""))
+                    added++
+                }
+            }
+            return added
+        }
+
+        fun fetchLoop(p: Int) {
+            val cc = cat ?: return done()
+            val total = cc.optInt("totalPages")
+            if (total in 1 until p) return finish(true, "")
+            status = prefix() + cc.optString("name") + " · sayfa " + p + (if (total > 0) "/$total" else "") + " · " + films.length() + " film"
+            prog = p
+            fetchPage(cc.optString("tpl"), p, g) { arr ->
+                if (arr == null) {
+                    log("fetch p$p başarısız")
+                    return@fetchPage finish(false, "")
+                }
+                val added = addFilms(arr)
+                pages++
+                cc.put("pages", cc.optInt("pages") + 1)
+                cc.put("apage", p)
+                log("ajax p$p films=" + films.length() + " added=$added")
+                schedule()
+                if (added == 0) return@fetchPage finish(true, "")
+                if (pages >= j.n) return@fetchPage finish(false, "")
+                step(500, g) { fetchLoop(p + 1) }
+            }
         }
 
         fun label(): String {
@@ -386,9 +426,39 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 if (pages >= j.n) return finish(false, "")
                 clicks++
                 evalJs(CLICKNEXT_JS, g) { ok ->
-                    if (ok == "1") step(1800, g) { extract() } else finish(true, "")
+                    if (ok == "1") {
+                        step(1800, g) {
+                            evalJs(TPL_JS, g) { t ->
+                                if (!t.isNullOrEmpty()) {
+                                    cc.put("tpl", t)
+                                    log("ajax şablonu: $t")
+                                    fetchLoop(2)
+                                } else extract()
+                            }
+                        }
+                    } else finish(true, "")
                 }
             } else finish(true, "")
+        }
+    }
+
+    /** Sayfanın içinde sitenin kendi sayfalama isteğini çağırır; sonucu bekleyip döndürür. */
+    private fun fetchPage(tpl: String, n: Int, g: Int, cb: (JSONArray?) -> Unit) {
+        evalJs(fetchJs(tpl, n), g) {
+            var tries = 0
+            fun poll() {
+                evalJs("(()=>{const r=window.__fres;return r?r:''})()", g) { r ->
+                    if (!r.isNullOrEmpty()) {
+                        try {
+                            val o = JSONObject(r)
+                            cb(if (o.optBoolean("ok")) o.optJSONArray("films") ?: JSONArray() else null)
+                        } catch (_: Exception) {
+                            cb(null)
+                        }
+                    } else if (++tries > 40) cb(null) else step(400, g) { poll() }
+                }
+            }
+            step(400, g) { poll() }
         }
     }
 
@@ -823,8 +893,9 @@ window.__gridCont=null;
 if(bestG&&bestG.l.length>=Math.max(6,items.length*0.4)){items=bestG.l;window.__gridCont=bestG.k}
 const films=items.slice(0,600).map(e=>({t:e.t.replace(/\s+izle\s*${'$'}/i,'').trim(),u:e.u,p:e.p}));
 // toplam sayfa + mevcut sayfa
-const pgSel='[class*=pagination] a,[class*=pager] a,[class*=paging] a,a.page-numbers,a[class*=page-link],nav[aria-label*=agin] a';
+const pgSel='[class*=pagination] a,[class*=pagination] button,[class*=pager] a,[class*=paging] a,a.page-numbers,a[class*=page-link],nav[aria-label*=agin] a';
 let last=0;const nums=[];
+const dp=document.querySelector('[data-pages]');if(dp){const v=parseInt(dp.getAttribute('data-pages'));if(v>0)last=v}
 document.querySelectorAll(pgSel).forEach(a=>{const t=(a.textContent||'').trim();if(/^\d{1,4}${'$'}/.test(t)){const n=parseInt(t);last=Math.max(last,n);nums.push({n:n,h:a.getAttribute('href')||''})}});
 const sp=new URL(H);let cur=1;
 const q=sp.searchParams.get('page')||sp.searchParams.get('paged')||sp.searchParams.get('p');
@@ -851,6 +922,39 @@ window.__gpage=(window.__gpage||1)+1;
 try{e.scrollIntoView({block:'center'})}catch(x){}
 e.click();return '1';
 }catch(e){return '0'}})()"""
+
+        /** Tıklamadan sonra sitenin kendi sayfalama isteğini (ör. /load/page/2/...) bulup {n} kalıbına çevirir. */
+        val TPL_JS = """(()=>{try{
+const n=window.__gpage||2;const gr=window.__gr||[];
+const re=new RegExp('(?<![0-9])'+n+'(?![0-9])');
+for(let i=gr.length-1;i>=0;i--){let u;try{u=new URL(gr[i],location.href)}catch(e){continue}
+ if(u.origin!==location.origin)continue;
+ const s=u.pathname+u.search;
+ if(!/page|load|paged|offset|[?&]p=/i.test(s))continue;
+ if(re.test(s))return s.replace(re,'{n}');
+}
+return '';
+}catch(e){return ''}})()"""
+
+        /** Sitenin sayfalama adresini doğrudan çağırıp film kartlarını sonuca yazar (window.__fres). */
+        fun fetchJs(tpl: String, n: Int): String = """(()=>{window.__fres=null;try{
+const u=""" + org.json.JSONObject.quote(tpl) + """.replace('{n}','""" + n + """');
+fetch(u,{headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(r=>r.text()).then(t=>{
+ let h=t;try{const j=JSON.parse(t);if(typeof j==='string')h=j;else{for(const k of Object.keys(j)){if(typeof j[k]==='string'&&j[k].indexOf('<a')>=0){h=j[k];break}}}}catch(e){}
+ const d=new DOMParser().parseFromString(h,'text/html');
+ const out=[];const seen=new Set();
+ d.querySelectorAll('a[href]').forEach(a=>{const img=a.querySelector('img');if(!img)return;
+  let u2='';try{u2=new URL(a.getAttribute('href'),location.href).href}catch(e){return}
+  if(u2.indexOf(location.origin)!==0||seen.has(u2))return;seen.add(u2);
+  let p=img.getAttribute('data-src')||img.getAttribute('data-lazy-src')||img.getAttribute('data-original')||'';
+  if(!p){const s=img.getAttribute('src')||'';if(s.indexOf('data:')!==0)p=s}
+  if(!p){const ss=img.getAttribute('srcset')||'';const f=ss.split(',')[0].trim().split(' ')[0];if(f&&f.indexOf('data:')!==0)p=f}
+  const tt=(a.title||img.alt||a.textContent||'').replace(/\s+/g,' ').trim();
+  let pu='';try{pu=p?new URL(p,location.href).href:''}catch(e){}
+  out.push({t:tt,u:u2,p:pu})});
+ window.__fres=JSON.stringify({films:out,ok:true})}).catch(e=>{window.__fres=JSON.stringify({films:[],ok:false})});
+}catch(e){window.__fres=JSON.stringify({films:[],ok:false})}
+return '1'})()"""
 
         /** Oynat düğmesine basar, oynatıcı alanının merkez koordinatını döndürür. */
         val CLICK_JS = """(()=>{try{
