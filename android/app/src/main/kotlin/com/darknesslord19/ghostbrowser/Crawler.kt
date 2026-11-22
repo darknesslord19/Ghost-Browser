@@ -314,6 +314,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         var initial = 0
         var wasDone = false
         var probeStage = 0
+        var triedStart = false
         var probePage = 2
         var probeBase = ""
 
@@ -497,6 +498,13 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 log("probe p1 added=$added total=" + films.length())
                 return finish(true, "")
             }
+            if (!triedStart && pages == 0 && added > 0 && added <= 15 && !url.contains("page=")) {
+                triedStart = true
+                log("az film var ($added), ?page=1 deneniyor")
+                url = url.substringBefore('#') + (if (url.contains('?')) "&" else "?") + "page=1"
+                step(500, g) { page() }
+                return
+            }
             pages++
             log("p$pages url=" + url.takeLast(60) + " films=" + films.length() + " added=$added next=" + next.takeLast(60) + " last=$last nc=$nc")
             cc.put("pages", cc.optInt("pages") + 1)
@@ -655,7 +663,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     var chal = 0
                     lateinit var pollRef: () -> Unit
                     fun cont() {
-                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000) evalJs(CLICK_JS, g) { tap(it) }
+                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000 || waited == 20000 || waited == 27000) evalJs(CLICK_JS, g) { tap(it) }
                         if (waited >= 20000) return fail()
                         step(300, g) { pollRef() }
                     }
@@ -1250,12 +1258,12 @@ return '1'})()"""
 
         /** Oynat düğmesine basar, oynatıcı alanının merkez koordinatını döndürür. */
         val CLICK_JS = """(()=>{try{
-const sel=['.play-that-video','.play-icon','.vjs-big-play-button','.jw-icon-display','.plyr__control--overlaid','[class*=play-btn]','[class*=playBtn]','[class*=btn-play]','.play-button','#play','button[aria-label*=lay]'];
+const sel=['.play-that-video','.play-icon','.vjs-big-play-button','.jw-icon-display','.plyr__control--overlaid','[class*=play-btn]','[class*=playBtn]','[class*=btn-play]','.play-button','#play','button[aria-label*=lay]','[data-preroll-slot]','#cstk','[data-player] button'];
 for(const s of sel){const e=document.querySelector(s);if(e&&e.offsetParent!==null){try{e.click()}catch(x){}break}}
 document.querySelectorAll('video').forEach(v=>{try{v.muted=true;v.play()}catch(x){}});
 window.scrollTo(0,0);
 let best=null,ba=0;
-for(const e of document.querySelectorAll('iframe,video,[class*=player],[id*=player]')){const r=e.getBoundingClientRect();const a=r.width*r.height;if(a>ba&&r.width>150&&r.height>100&&r.top<innerHeight&&r.left<innerWidth){ba=a;best=r}}
+for(const e of document.querySelectorAll('[data-preroll-slot],iframe,video,[class*=player],[id*=player]')){const r=e.getBoundingClientRect();const a=r.width*r.height;if(a>ba&&r.width>150&&r.height>100&&r.top<innerHeight&&r.left<innerWidth){ba=a;best=r}}
 if(!best)return JSON.stringify(null);
 return JSON.stringify({x:Math.min(best.left+best.width/2,innerWidth-5),y:Math.min(best.top+best.height/2,innerHeight-5)});
 }catch(e){return JSON.stringify(null)}})()"""
