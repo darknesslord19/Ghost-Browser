@@ -1219,6 +1219,7 @@ post({hello:1});
             }
 
             override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
+                if (tab.hidden) return false
                 val now = System.currentTimeMillis()
                 val block = store.bool("popupBlock")
                 if (block && (!isUserGesture || now - tab.lastPopup < 1200)) {
@@ -1270,7 +1271,7 @@ post({hello:1});
     }
 
     private fun sniff(tab: Tab, url: String, ref: String = "", master: Boolean = false, body: String = "") {
-        if (url.isEmpty()) return
+        if (url.isEmpty() || url.contains("/video/stub.mp4")) return
         main.post {
             if (tab.media.any { it.url == url }) return@post
             tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (master) "HLS ★" else if (url.contains("m3u8", true) || ref.isNotEmpty() && !MEDIA_RE.containsMatchIn(url)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video").also { it.body = body })
