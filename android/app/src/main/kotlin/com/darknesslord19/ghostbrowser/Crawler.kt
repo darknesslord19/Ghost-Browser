@@ -36,6 +36,15 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     private var tab: Tab? = null
     private val jobs = ArrayDeque<Job>()
     private var totalJobs = 0
+    private var jobMode = false
+    @Volatile var phase = ""
+        private set
+    @Volatile var curCat = ""
+        private set
+    @Volatile var prog = 0
+        private set
+    @Volatile var progTotal = 0
+        private set
 
     private class Job(val kind: String, val site: String, val cat: String, val n: Int)
 
@@ -85,6 +94,11 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
     private fun finish(msg: String) {
         running = false
+        jobMode = false
+        phase = ""
+        curCat = ""
+        prog = 0
+        progTotal = 0
         gen++
         status = msg
         jobs.clear()
@@ -150,6 +164,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         if (u.isEmpty()) return "Adres boş"
         if (!u.startsWith("http")) u = "https://$u"
         begin("Kategoriler aranıyor…")
+        phase = "discover"
         val g = gen
         load(u, g) {
             evalJs(CATS_JS, g) { r ->
@@ -193,25 +208,27 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     }
 
     // ---------------- 2) film listele / 3) video çöz ----------------
-    fun list(h: String, urls: JSONArray, maxPages: Int): String {
-        if (running) return "Bir tarama sürüyor"
-        jobs.clear()
-        for (i in 0 until urls.length()) jobs.add(Job("list", h, urls.getString(i), maxPages.coerceIn(1, 5000)))
-        if (jobs.isEmpty()) return "Kategori seç"
-        startJobs()
+    private fun queue(kind: String, h: String, urls: JSONArray, n: Int): String {
+        if (running && !jobMode) return "Kategori arama sürüyor, bitince tekrar dene"
+        if (urls.length() == 0) return "Kategori seç"
+        val fresh = !running
+        if (fresh) jobs.clear()
+        for (i in 0 until urls.length()) {
+            val u = urls.getString(i)
+            if (jobs.any { it.kind == kind && it.site == h && it.cat == u } || (kind == phase && u == curCat)) continue
+            jobs.add(Job(kind, h, u, n))
+            if (!fresh) totalJobs++
+        }
+        if (fresh) startJobs()
         return ""
     }
 
-    fun resolve(h: String, urls: JSONArray, limit: Int): String {
-        if (running) return "Bir tarama sürüyor"
-        jobs.clear()
-        for (i in 0 until urls.length()) jobs.add(Job("resolve", h, urls.getString(i), limit.coerceIn(1, 100000)))
-        if (jobs.isEmpty()) return "Kategori seç"
-        startJobs()
-        return ""
-    }
+    fun list(h: String, urls: JSONArray, maxPages: Int): String = queue("list", h, urls, maxPages.coerceIn(1, 5000))
+
+    fun resolve(h: String, urls: JSONArray, limit: Int): String = queue("resolve", h, urls, limit.coerceIn(1, 100000))
 
     private fun startJobs() {
+        jobMode = true
         totalJobs = jobs.size
         begin("Başlıyor…")
         nextJob(gen)
@@ -232,6 +249,10 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
     private fun runList(j: Job, g: Int, done: () -> Unit) {
         val cat = findCat(j.site, j.cat) ?: return done()
+        phase = "list"
+        curCat = j.cat
+        prog = 0
+        progTotal = 0
         val films = cat.optJSONArray("films") ?: JSONArray().also { cat.put("films", it) }
         val seen = HashSet<String>()
         for (i in 0 until films.length()) seen.add(films.getJSONObject(i).optString("url"))
@@ -242,6 +263,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
         fun page() {
             status = prefix() + cat.optString("name") + " · sayfa " + (cat.optInt("pages") + 1) + " · " + films.length() + " film"
+            prog = pages + 1
             visited.add(url)
             load(url, g) {
                 evalJs(LIST_JS, g) { r ->
@@ -292,10 +314,15 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             if (todo.size >= j.n) break
         }
         var idx = 0
+        phase = "resolve"
+        curCat = j.cat
+        prog = 0
+        progTotal = todo.size
 
         fun nextFilm() {
             if (idx >= todo.size) return done()
             val f = todo[idx++]
+            prog = idx
             status = prefix() + "Video çözülüyor " + idx + "/" + todo.size + " · " + f.optString("title").take(40)
             load(f.optString("url"), g) {
                 val t = tab
@@ -460,6 +487,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
+        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("queue", jobs.size)
 
     fun summary(): JSONArray {
         val out = JSONArray()
@@ -515,6 +543,43 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             arr.put(JSONObject().put("host", k).put("url", s.optString("url")).put("title", s.optString("title")).put("categories", cs))
         }
         return JSONObject().put("format", "ghost-crawl-1").put("sites", arr).toString(2)
+    }
+
+    /** Çözülmüş videoları M3U8 oynatma listesi olarak döndürür (seçili kategoriler, boşsa hepsi). */
+    fun exportM3u(h: String, urls: JSONArray): Pair<String, Int> {
+        val site = sites.optJSONObject(h) ?: throw IllegalArgumentException("Site yok")
+        val want = HashSet<String>()
+        for (i in 0 until urls.length()) want.add(urls.getString(i))
+        val sb = StringBuilder("#EXTM3U\n")
+        var n = 0
+        val ca = cats(site)
+        for (i in 0 until ca.length()) {
+            val cat = ca.getJSONObject(i)
+            if (want.isNotEmpty() && !want.contains(cat.optString("url"))) continue
+            val grp = ((if (cat.optString("group").isNotEmpty()) cat.optString("group") + " > " else "") + cat.optString("name")).replace("\"", "'")
+            val fl = cat.optJSONArray("films") ?: continue
+            for (k in 0 until fl.length()) {
+                val f = fl.getJSONObject(k)
+                val v = f.optString("video")
+                if (v.isEmpty()) continue
+                val tm = f.optJSONObject("tmdb")
+                val title = (tm?.optString("title")?.ifEmpty { null } ?: cleanTitle(f.optString("title")).first).replace(Regex("[\\r\\n]+"), " ")
+                val logo = (tm?.optString("poster")?.ifEmpty { null } ?: f.optString("poster")).replace("\"", "")
+                sb.append("#EXTINF:-1 tvg-name=\"").append(title.replace("\"", "'")).append("\" tvg-logo=\"").append(logo).append("\" group-title=\"").append(grp).append("\",").append(title).append('\n')
+                val ref = f.optString("videoRef")
+                if (ref.isNotEmpty()) sb.append("#EXTVLCOPT:http-referrer=").append(ref).append('\n')
+                sb.append(v).append('\n')
+                n++
+            }
+        }
+        if (n == 0) throw IllegalArgumentException("Çözülmüş video yok. Önce \"Videoları çöz\" çalıştır.")
+        return sb.toString() to n
+    }
+
+    fun saveM3u(h: String, urls: JSONArray): String {
+        val (text, n) = exportM3u(h, urls)
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date())
+        return host.saveText("ghost-$h-$stamp.m3u8", text) + " ($n video)"
     }
 
     fun saveFile(h: String): String {

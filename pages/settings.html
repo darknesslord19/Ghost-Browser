@@ -32,6 +32,19 @@ pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; p
 .litem { display: flex; gap: 6px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); }
 .litem .lt { flex: 1; min-width: 0; } .litem .ln { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .litem small { color: var(--dim); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
+.spin { width: 16px; height: 16px; border: 2px solid #ffffff30; border-top-color: #ec4899; border-radius: 50%; animation: cspin .8s linear infinite; flex: none; display: none; }
+.spin.on, .busy .spin { display: inline-block; }
+@keyframes cspin { to { transform: rotate(360deg); } }
+.bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
+.bar.det i { width: var(--w, 0%); transition: width .4s; }
+.bar.idle i { animation: none; width: 0; }
+@keyframes cshim { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+#cStat { position: sticky; top: 0; z-index: 5; box-shadow: 0 6px 24px #000a; }
+.ccat.busy > summary { background: linear-gradient(90deg, #8b5cf633, transparent); }
+.ccat em.pulse { animation: cpulse .7s; color: #fff; }
+@keyframes cpulse { 0% { transform: scale(1.35); color: #ec4899; } 100% { transform: scale(1); } }
 .litem img.poster { width: 46px; height: 68px; object-fit: cover; border-radius: 8px; flex: none; background: var(--bg3); }
 .litem button { width: 38px; height: 38px; padding: 0; border-radius: 10px; flex: none; }
 .ctool { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
@@ -144,7 +157,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 <section id="crawler"><h2>Site Tarayıcı</h2>
   <div class="dim" style="margin-bottom:10px">Herhangi bir film sitesinin kategorilerini bulur, filmleri listeler ve video adreslerini toplar. Sonucu JSON olarak kaydedebilirsin.</div>
   <div class="row"><input id="cUrl" type="url" placeholder="https://film-sitesi.com" style="flex:1"><button class="primary" id="cFind">Kategorileri bul</button></div>
-  <div class="card" id="cStat" style="display:none;margin-top:10px"><div id="cMsg"></div><div class="row" style="margin-top:8px"><button id="cStop" class="danger">Durdur</button></div></div>
+  <div class="card" id="cStat" style="display:none;margin-top:10px"><div class="srow"><span class="spin" id="cSpin"></span><span id="cMsg"></span></div><div class="bar" id="cBar"><i></i></div><div class="row" style="margin-top:8px"><button id="cStop" class="danger">Durdur</button><label class="dim" style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="cAuto" style="width:18px;height:18px;accent-color:#8b5cf6"> Taramadan sonra videoları da çöz</label></div></div>
   <div id="cSites"></div>
   <div class="card" style="margin-top:14px"><b>TMDB (isteğe bağlı)</b>
     <div class="dim" style="margin:4px 0 8px;font-size:13px">Anahtar girersen filmlerin adı temizlenir, afiş, yıl, puan ve özet TMDB'den eklenir. Girmezsen siteden alınan afiş ve adlar kullanılır. Ücretsiz anahtar: themoviedb.org → Ayarlar → API.</div>
@@ -250,7 +263,7 @@ async function loadLinks() {
 }
 
 // ---- site tarayıcı ----
-let cKey = '', cSup = null, cLastSig = '', cSel = new Set(), cOpen = new Set(), cTimer = null;
+let cKey = '', cCounts = {}, cSup = null, cLastSig = '', cSel = new Set(), cOpen = new Set(), cTimer = null;
 async function loadCrawler() {
   if (cSup === null) { try { await ghost.invoke('crawl-state'); cSup = true; } catch (e) { cSup = false; } }
   if (!cSup) { $('#crawler').innerHTML = '<h2>Site Tarayıcı</h2><div class="card dim">Bu özellik şimdilik yalnızca Android sürümünde çalışır.</div>'; return; }
@@ -261,12 +274,18 @@ async function loadCrawler() {
 async function refreshCrawler() {
   const st = await ghost.invoke('crawl-state');
   $('#cStat').style.display = st.running || st.status ? 'block' : 'none';
-  $('#cMsg').textContent = (st.running ? '⏳ ' : '') + (st.status || '') + (st.enriching ? '  ·  TMDB: ' + st.enrichLeft + ' kaldı' : '');
-  $('#cStat').style.display = st.running || st.status || st.enriching ? 'block' : 'none'; $('#cStop').style.display = st.running || st.enriching ? '' : 'none';
-  $('#cStop').style.display = st.running ? '' : 'none';
+  const act = st.running || st.enriching;
+  $('#cStat').style.display = act || st.status ? 'block' : 'none';
+  $('#cMsg').textContent = (st.status || '') + (st.enriching ? '  ·  TMDB: ' + st.enrichLeft + ' kaldı' : '') + (st.queue ? '  ·  sırada ' + st.queue : '');
+  $('#cStop').style.display = act ? '' : 'none';
+  $('#cSpin').classList.toggle('on', !!act);
+  const bar = $('#cBar'); bar.className = 'bar' + (!act ? ' idle' : st.phase === 'resolve' && st.progTotal ? ' det' : '');
+  if (st.phase === 'resolve' && st.progTotal) bar.style.setProperty('--w', Math.round(st.prog / st.progTotal * 100) + '%');
   $('#cFind').disabled = st.running;
+  document.querySelectorAll('.ccat').forEach(e => e.classList.toggle('busy', !!st.running && e.dataset.url === st.cat));
   const sum = await ghost.invoke('crawl-sites'), sig = JSON.stringify(sum);
   if (sig !== cLastSig) { cLastSig = sig; renderCrawler(sum, st.running); }
+  document.querySelectorAll('.ccat').forEach(e => e.classList.toggle('busy', !!st.running && e.dataset.url === st.cat));
 }
 function cBtn(txt, fn, cls) { const b = document.createElement('button'); b.textContent = txt; if (cls) b.className = cls; b.onclick = fn; return b; }
 function cSelect(opts, def) { const e = document.createElement('select'); opts.forEach(o => { const x = document.createElement('option'); x.value = o[0]; x.textContent = o[1]; if (String(o[0]) === String(def)) x.selected = true; e.append(x); }); return e; }
@@ -291,19 +310,30 @@ function renderCrawler(sum, running) {
       cBtn('Hepsini seç', () => { const all = s.cats.every(c => cSel.has(c.url)); s.cats.forEach(c => all ? cSel.delete(c.url) : cSel.add(c.url)); cLastSig = ''; refreshCrawler(); }),
       cBtn('JSON kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save', s.host)); } catch (e) { msg(e.message); } }),
       cBtn('Kopyala', async () => { msg(await copyText(await ghost.invoke('crawl-export', s.host)) ? 'JSON kopyalandı' : 'Kopyalanamadı'); }),
+      cBtn('M3U8 kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked())); } catch (e) { msg(e.message); } }),
+      cBtn('M3U8 kopyala', async () => { try { msg(await copyText(await ghost.invoke('crawl-copy-m3u', s.host, picked())) ? 'M3U8 kopyalandı' : 'Kopyalanamadı'); } catch (e) { msg(e.message); } }),
       cBtn('Kategori ekle', async () => { const u = prompt('Kategori sayfasının adresi'); if (!u) return; const n = prompt('Kategori adı (isteğe bağlı)') || ''; const r = await ghost.invoke('crawl-addcat', s.host, n, u); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
       cBtn('Siteyi sil', async () => { if (confirm(s.host + ' kayıtları silinsin mi?')) { await ghost.invoke('crawl-remove', s.host); cLastSig = ''; refreshCrawler(); } }, 'danger'));
     det.append(tool2);
     s.cats.forEach(c => {
-      const cd = document.createElement('details'); cd.className = 'ccat'; const key = 'c:' + s.host + c.url; cd.open = cOpen.has(key);
+      const cd = document.createElement('details'); cd.className = 'ccat'; cd.dataset.url = c.url; const key = 'c:' + s.host + c.url; cd.open = cOpen.has(key);
       const sm = document.createElement('summary');
-      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = cSel.has(c.url); cb.onclick = (e) => { e.stopPropagation(); cb.checked ? cSel.add(c.url) : cSel.delete(c.url); };
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = cSel.has(c.url); cb.onclick = (e) => e.stopPropagation();
+      cb.onchange = async () => {
+        cb.checked ? cSel.add(c.url) : cSel.delete(c.url);
+        if (cb.checked && !c.done) { const r = await ghost.invoke('crawl-list', s.host, [c.url], +pg.value); if (r) msg(r); else if ($('#cAuto').checked) await ghost.invoke('crawl-resolve', s.host, [c.url], +lim.value); cLastSig = ''; refreshCrawler(); }
+      };
       const nm = document.createElement('span'); nm.className = 'cn'; nm.textContent = (c.group ? c.group + ' › ' : '') + c.name;
       const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.done ? ' ✓' : '') : 'taranmadı';
-      sm.append(cb, nm, ct); cd.append(sm);
+      const sp = document.createElement('span'); sp.className = 'spin'; sm.append(cb, nm, sp, ct); cd.append(sm);
+      const prev = cCounts[s.host + c.url]; if (prev !== undefined && prev !== c.films) { ct.classList.add('pulse'); } cCounts[s.host + c.url] = c.films;
       const body = document.createElement('div'); cd.append(body);
       const fill = async () => {
         body.innerHTML = ''; const fl = await ghost.invoke('crawl-films', s.host, c.url); let shown = 0;
+        const bt = document.createElement('div'); bt.className = 'ctool';
+        bt.append(cBtn('Bu kategoriyi tara', async () => { const r = await ghost.invoke('crawl-list', s.host, [c.url], +pg.value); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
+          cBtn('Videoları çöz', async () => { const r = await ghost.invoke('crawl-resolve', s.host, [c.url], +lim.value); if (r) msg(r); cLastSig = ''; refreshCrawler(); }, 'primary'));
+        body.append(bt);
         const more = () => { fl.slice(shown, shown + 150).forEach(f => body.insertBefore(filmRow(f), moreBtn)); shown = Math.min(fl.length, shown + 150); moreBtn.style.display = shown < fl.length ? '' : 'none'; moreBtn.textContent = 'Daha fazla (' + (fl.length - shown) + ')'; };
         const moreBtn = cBtn('Daha fazla', more); moreBtn.style.margin = '8px 12px'; body.append(moreBtn);
         if (!fl.length) body.insertBefore(Object.assign(document.createElement('div'), { className: 'dim', textContent: 'Bu kategori henüz taranmadı.' }), moreBtn);

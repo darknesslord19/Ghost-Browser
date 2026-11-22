@@ -160,7 +160,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 if (Build.VERSION.SDK_INT >= 29) {
                     val cv = android.content.ContentValues()
                     cv.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
-                    cv.put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+                    cv.put(android.provider.MediaStore.Downloads.MIME_TYPE, if (name.endsWith(".json")) "application/json" else "application/x-mpegURL")
                     val uri = contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv) ?: throw RuntimeException("Dosya oluşturulamadı")
                     contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
                     return "İndirilenler/$name"
@@ -1257,6 +1257,8 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-enrich" -> reply(true, crawler.enrich(args.optString(0), args.optJSONArray(1) ?: JSONArray(), store.str("tmdbKey")))
                 "crawl-stop" -> { crawler.stop(); crawler.stopEnrich(); reply(true, true) }
                 "crawl-export" -> reply(true, crawler.export(args.optString(0)))
+                "crawl-save-m3u" -> try { reply(true, crawler.saveM3u(args.optString(0), args.optJSONArray(1) ?: JSONArray())) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }
+                "crawl-copy-m3u" -> try { reply(true, crawler.exportM3u(args.optString(0), args.optJSONArray(1) ?: JSONArray()).first) } catch (e: Exception) { reply(false, null, e.message ?: "Liste yok") }
                 "crawl-save" -> try { reply(true, crawler.saveFile(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }
                 "crawl-import" -> try { reply(true, crawler.import(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "İçe aktarılamadı") }
                 "crawl-remove" -> { crawler.remove(args.optString(0)); reply(true, true) }
