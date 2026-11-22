@@ -452,7 +452,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     } else stale++
                     val cc = cat
                     status = prefix() + (cc?.optString("name") ?: "") + " · kaydırılıyor · " + cnt + " kart"
-                    val enough = stale >= (if (grew) 4 else 2)
+                    val enough = stale >= (if (best <= 0) 8 else if (grew) 4 else 2)
                     if (enough || rounds >= maxRounds) {
                         log("scroll rounds=$rounds cards=$cnt")
                         evalJs(LIST_JS, g) { x -> process(x) }
