@@ -334,7 +334,8 @@ async function githubModal() {
     const f = (ph, val, type) => { const i = document.createElement('input'); i.type = type || 'text'; i.placeholder = ph; i.value = val || ''; i.style.margin = '4px 0'; b.append(i); return i; };
     const repo = f('Depo: kullanici/depo-adi', cfg.githubRepo), path = f('Klasör (varsayılan ghost-tarayici)', cfg.githubPath), br = f('Dal (boşsa varsayılan dal)', cfg.githubBranch), tok = f('Token: ghp_…', cfg.githubToken, 'password');
     const lb = document.createElement('label'); lb.style.cssText = 'display:flex;gap:8px;align-items:center;margin:10px 4px;font-size:14px'; const ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = !!cfg.githubAuto; ck.style.cssText = 'width:20px;height:20px;accent-color:var(--acc)'; lb.append(ck, document.createTextNode('Tarama/çözme bitince otomatik güncelle')); b.append(lb);
-    const save = async () => { await ghost.invoke('set', { githubRepo: repo.value, githubPath: path.value, githubBranch: br.value, githubToken: tok.value, githubAuto: ck.checked }); };
+    const lb2 = document.createElement('label'); lb2.style.cssText = lb.style.cssText; const ck2 = document.createElement('input'); ck2.type = 'checkbox'; ck2.checked = !!cfg.diag; ck2.style.cssText = ck.style.cssText; lb2.append(ck2, document.createTextNode('Uzaktan tanı (Claude hata ayıklayabilsin)')); b.append(lb2);
+    const save = async () => { await ghost.invoke('set', { githubRepo: repo.value, githubPath: path.value, githubBranch: br.value, githubToken: tok.value, githubAuto: ck.checked, diag: ck2.checked }); };
     const r = document.createElement('div'); r.className = 'mb';
     const n = document.createElement('button'); n.textContent = 'Kapat'; n.onclick = async () => { await save(); close(false); };
     const y = document.createElement('button'); y.className = 'primary'; y.textContent = 'Kaydet ve şimdi yükle';

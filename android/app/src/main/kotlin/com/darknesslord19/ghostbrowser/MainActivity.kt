@@ -1384,7 +1384,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                     reply(true, JSONObject().put("local", n))
                 }
                 "history" -> reply(true, history.recent(minOf(args.optInt(1, 100), 500), args.optString(0)))
-                "crawl-state" -> reply(true, crawler.stateJson())
+                "crawl-state" -> { crawler.diagStart(); reply(true, crawler.stateJson()) }
                 "crawl-sites" -> reply(true, crawler.summary())
                 "crawl-films" -> reply(true, crawler.films(args.optString(0), args.optString(1)))
                 "crawl-log" -> reply(true, crawler.log(args.optString(0), args.optString(1)))
