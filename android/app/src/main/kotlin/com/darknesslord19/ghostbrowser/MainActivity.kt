@@ -71,9 +71,9 @@ class MainActivity : Activity() {
         val SNIFF_JS = """(()=>{if(window.__gs)return;window.__gs=1;const seen=new Set();
 const bad=u=>/\.(jpe?g|png|webp|gif|svg|ts|m4s|vtt|srt|css|js)(\?|#|${'$'})/i.test(u);
 const ok=u=>!bad(u)&&(/\.(m3u8|mpd|mp4|webm|m4v|mov|mkv)(\?|#|${'$'})/i.test(u)||/m3u8|videoplayback/i.test(u));
-const send=(u,f,mst)=>{try{if(!u||typeof u!=='string')return;u=new URL(u,location.href).href;if(!/^https?:/.test(u)||seen.has(u)||(!f&&!ok(u)))return;seen.add(u);GhostSniff.postMessage(JSON.stringify({u:u,r:location.href,m:mst?1:0}))}catch(e){}};
+const send=(u,f,mst,b)=>{try{if(!u||typeof u!=='string')return;u=new URL(u,location.href).href;if(!/^https?:/.test(u)||seen.has(u)||(!f&&!ok(u)))return;seen.add(u);GhostSniff.postMessage(JSON.stringify({u:u,r:location.href,m:mst?1:0,b:b||''}))}catch(e){}};
 const head=t=>{t=t.trim();return t.indexOf('#EXTM3U')==0?(t.indexOf('#EXT-X-STREAM-INF')>0?2:1):0};
-const chk=(u,r)=>{try{const rd=r.clone().body.getReader();rd.read().then(a=>{try{rd.cancel()}catch(e){}if(a.value){const k=head(new TextDecoder().decode(a.value.subarray(0,4096)));if(k)send(u,1,k==2)}}).catch(()=>{})}catch(e){}};
+const chk=(u,r)=>{try{const rd=r.clone().body.getReader();rd.read().then(a=>{try{rd.cancel()}catch(e){}if(a.value){const k=head(new TextDecoder().decode(a.value.subarray(0,4096)));if(k){r.clone().text().then(t=>send(u,1,k==2,t.slice(0,8000))).catch(()=>send(u,1,k==2))}}}).catch(()=>{})}catch(e){}};
 const gr=window.__gr=window.__gr||[];const of=window.fetch;if(of)window.fetch=function(a){const u=typeof a==='string'?a:a&&a.url;try{send(u);if(gr.length<200)gr.push(String(u))}catch(e){}const p=of.apply(this,arguments);try{p.then(r=>{if(r&&r.ok&&r.body)chk(r.url||u,r)}).catch(()=>{})}catch(e){}return p};
 const xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{const U=String(u);send(U);if(gr.length<200)gr.push(U);this.addEventListener('load',()=>{try{let t='';if(this.responseType===''||this.responseType==='text')t=(this.responseText||'').slice(0,4096);else if(this.responseType==='arraybuffer'&&this.response)t=new TextDecoder().decode(new Uint8Array(this.response,0,Math.min(4096,this.response.byteLength)));const k=head(t);if(k)send(U,1,k==2)}catch(e){}})}catch(e){}return xo.apply(this,arguments)};
 const scan=()=>{try{document.querySelectorAll('video,source').forEach(e=>{send(e.currentSrc);send(e.src);send(e.getAttribute('src'))})}catch(e){}};
@@ -1051,7 +1051,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 WebViewCompat.addWebMessageListener(wv, "GhostSniff", setOf("*")) { _, message, _, _, _ ->
                     try {
                         val o = JSONObject(message.data ?: "")
-                        if (!tab.isPlayer && !tab.isInternal) sniff(tab, o.optString("u"), o.optString("r"), o.optInt("m") == 1)
+                        if (!tab.isPlayer && !tab.isInternal) sniff(tab, o.optString("u"), o.optString("r"), o.optInt("m") == 1, o.optString("b"))
                     } catch (_: Exception) {}
                 }
                 WebViewCompat.addDocumentStartJavaScript(wv, SNIFF_JS, setOf("*"))
@@ -1227,11 +1227,11 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         bar.visibility = View.VISIBLE
     }
 
-    private fun sniff(tab: Tab, url: String, ref: String = "", master: Boolean = false) {
+    private fun sniff(tab: Tab, url: String, ref: String = "", master: Boolean = false, body: String = "") {
         if (url.isEmpty()) return
         main.post {
             if (tab.media.any { it.url == url }) return@post
-            tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (master) "HLS ★" else if (url.contains("m3u8", true) || ref.isNotEmpty() && !MEDIA_RE.containsMatchIn(url)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video"))
+            tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (master) "HLS ★" else if (url.contains("m3u8", true) || ref.isNotEmpty() && !MEDIA_RE.containsMatchIn(url)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video").also { it.body = body })
             tab.media.sortBy { if (it.kind == "HLS ★") 0 else 1 }
             while (tab.media.size > 15) tab.media.removeAt(tab.media.size - 1)
             if (tab === cur) { updateUi(); askPlayer(tab) }
@@ -1424,6 +1424,8 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
                 "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
                 "crawl-fresh" -> reply(true, crawler.fresh(args.optString(0), args.optString(1), args.optString(2)) && crawler.resolve(args.optString(0), JSONArray().put(args.optString(1)), 1).isNotEmpty())
+                "diag-run" -> reply(true, crawler.diagRun(args.optString(0), args.optInt(1, 20), args.optString(2)))
+                "diag-result" -> reply(true, crawler.diagResult())
                 "relay-status" -> reply(true, relay.status)
                 "crawl-github" -> reply(true, crawler.githubSync(args.optString(0)))
                 "clipboard-read" -> reply(true, try {

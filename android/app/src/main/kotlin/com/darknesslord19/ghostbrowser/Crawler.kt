@@ -780,6 +780,18 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         ghPut("darknesslord19/Ghost-Browser", "out.json", out.toString(2), "diag", token)
     }
 
+    @Volatile private var diagOut = ""
+    fun diagRun(url: String, wait: Int, js: String): String {
+        diagOut = ""
+        Thread {
+            val o = JSONObject()
+            try { diagProbe(JSONObject().put("url", url).put("wait", wait).put("js", js), o) } catch (e: Exception) { o.put("error", e.toString()) }
+            diagOut = o.toString()
+        }.start()
+        return "başladı"
+    }
+    fun diagResult(): String = diagOut
+
     private fun diagFetch(cmd: JSONObject, out: JSONObject) {
         val u = cmd.optString("url")
         val c = URL(u).openConnection() as HttpURLConnection
@@ -825,7 +837,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                             out.put("diag", d ?: "")
                             val t = tab
                             val arr = JSONArray()
-                            t?.media?.forEach { arr.put(JSONObject().put("url", it.url).put("ref", it.ref).put("kind", it.kind)) }
+                            t?.media?.forEach { arr.put(JSONObject().put("url", it.url).put("ref", it.ref).put("kind", it.kind).put("body", it.body)) }
                             out.put("media", arr)
                             evalJs("(()=>{try{return String(eval(" + JSONObject.quote(js) + "))}catch(e){return 'ERR '+e}})()", g) { r ->
                                 out.put("js", r ?: "")

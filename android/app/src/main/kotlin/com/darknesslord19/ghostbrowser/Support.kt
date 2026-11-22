@@ -8,7 +8,9 @@ import android.os.SystemClock
 import android.view.View
 import android.webkit.WebView
 
-class MediaItem(val url: String, val ref: String, val kind: String)
+class MediaItem(val url: String, val ref: String, val kind: String) {
+    var body: String = ""
+}
 
 class Tab(val id: Int, val webView: WebView) {
     @Volatile var url: String = ""
