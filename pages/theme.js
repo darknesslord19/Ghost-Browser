@@ -20,19 +20,18 @@
   for (const [id, name, h1, h2, base, a1, a2] of G) add(id, name, [hsl(h1, 55, 6), hsl(h1, 48, 10), hsl(h2, 40, 15), hsl(h2, 38, 26), '#f4f4fb', '#b0b0c8', a1, a2], { bgimg: 'linear-gradient(160deg,' + hsl(h1, 60, 8) + ' 0%,' + hsl((h1 + h2) / 2, 55, 11) + ' 50%,' + hsl(h2, 58, 10) + ' 100%)' });
   // 10 açık tema
   const L = [['snow', 'Snow', 220, 90], ['pearl', 'Pearl', 40, 70], ['linen', 'Linen', 30, 60], ['mint-cream', 'Mint Cream', 150, 55], ['sky-light', 'Sky Light', 205, 85], ['blush', 'Blush', 345, 80], ['lavender-mist', 'Lavender Mist', 265, 75], ['sand', 'Sand', 38, 65], ['peach', 'Peach', 18, 85], ['sage', 'Sage', 105, 40]];
-  for (const [id, name, h, s] of L) add(id, name, [hsl(h, 30, 97), hsl(h, 28, 94), hsl(h, 26, 90), hsl(h, 22, 82), hsl(h, 30, 12), hsl(h, 14, 38), hsl(h, s, 42), hsl(h + 40, s, 48)], { light: true });
-  // 80 koyu tema: 40 koyu dark + 40 orta dark
-  const H = [['Ruby', 350], ['Coral', 10], ['Amber', 35], ['Gold', 48], ['Lime', 80], ['Emerald', 145], ['Mint', 162], ['Teal', 178], ['Cyan', 190], ['Sky', 205], ['Azure', 216], ['Sapphire', 226], ['Indigo', 246], ['Violet', 266], ['Orchid', 286], ['Magenta', 310], ['Rose', 334], ['Crimson', 0], ['Copper', 22], ['Slate', 215]];
-  const V = [
-    ['Onyx', h => [hsl(h, 14, 3.5), hsl(h, 14, 6), hsl(h, 14, 9.5), hsl(h, 12, 15), hsl(h, 80, 62), hsl(h + 30, 80, 62)], 'koyu'],
-    ['Abyss', h => [hsl(h, 30, 2.5), hsl(h, 30, 5), hsl(h, 28, 8), hsl(h, 26, 13), hsl(h, 90, 58), hsl(h - 25, 90, 60)], 'koyu'],
-    ['Dusk', h => [hsl(h, 22, 11), hsl(h, 22, 15), hsl(h, 20, 20), hsl(h, 18, 28), hsl(h, 75, 66), hsl(h + 35, 80, 66)], 'orta'],
-    ['Smoke', h => [hsl(h, 12, 14), hsl(h, 12, 18), hsl(h, 11, 23), hsl(h, 10, 31), hsl(h, 70, 68), hsl(h - 30, 75, 68)], 'orta']
-  ];
-  for (const [hn, h] of H) for (const [vn, fn] of V) {
-    if (hn === 'Violet' && vn === 'Dusk') continue; // Ghost bunun yerine
-    const c = fn(h); add((hn + '-' + vn).toLowerCase(), hn + ' ' + vn, [c[0], c[1], c[2], c[3], hsl(h, 14, 93), hsl(h, 10, 64), c[4], c[5]]);
-  }
+  for (const [id, name, h, s] of L) add(id, name, [hsl(h, 30, 97), hsl(h, 28, 94), hsl(h, 26, 90), hsl(h, 22, 82), hsl(h, 30, 12), hsl(h, 14, 38), hsl(h, Math.min(s, 55), 40), hsl(h + 8, Math.min(s, 50), 46)], { light: true });
+  // 80 koyu tema: sakin, doğa/toprak tonları. Her ailede koyu + orta koyu; vurgu ve ikinci renk birbirine yakın.
+  const E = [['Deve Tüyü', 34, 32], ['Mint Yeşili', 150, 28], ['Askeri Yeşil', 88, 24], ['Yeşim Taşı', 160, 30], ['Defne Yaprağı', 105, 22], ['Zeytin', 70, 26], ['Adaçayı', 120, 16], ['Kum', 40, 24], ['Toprak', 25, 26], ['Kahve', 22, 32],
+    ['Çikolata', 15, 30], ['Bakır', 18, 38], ['Pas', 12, 36], ['Kiremit', 10, 32], ['Bordo', 350, 34], ['Şarap', 340, 28], ['Mürdüm', 300, 22], ['Lavanta Grisi', 265, 16], ['Duman', 220, 8], ['Kömür', 210, 6],
+    ['Çelik', 210, 16], ['Petrol', 195, 30], ['Deniz Mavisi', 200, 32], ['Gece Mavisi', 225, 30], ['Buz Mavisi', 200, 18], ['Çam Yeşili', 140, 28], ['Orman', 130, 26], ['Ceviz', 28, 22], ['Taş', 40, 10], ['Kurşun', 220, 10],
+    ['Bulut', 210, 12], ['Hardal', 48, 36], ['Amber', 38, 38], ['Gül Kurusu', 345, 22], ['Mercan', 8, 30], ['Kaktüs', 110, 20], ['Okaliptüs', 165, 18], ['Turkuaz', 180, 28], ['Antrasit', 215, 9], ['Fındık', 30, 28]];
+  E.forEach(([name, h, s], i) => {
+    [['Koyu', [5, 8, 12, 19], .5], ['Orta', [12, 16, 21, 29], .5]].forEach(([vn, L, k], vi) => {
+      if (i === E.length - 1 && vi === 1) return; // Ghost için yer
+      add('e' + i + (vi ? 'o' : 'k'), name + ' ' + vn, [hsl(h, s * k, L[0]), hsl(h, s * k, L[1]), hsl(h, s * k * .9, L[2]), hsl(h, s * k * .8, L[3]), hsl(h, s * .4, 92), hsl(h, s * .3, 62), hsl(h, Math.min(s + 22, 60), 60), hsl(h + 8, Math.min(s + 14, 52), 68)]);
+    });
+  });
   const get = () => { try { return localStorage.getItem('gbTheme') || 'ghost'; } catch (e) { return 'ghost'; } };
   function apply(id) {
     const t = T.find(x => x.id === id) || T[0], r = document.documentElement.style;
