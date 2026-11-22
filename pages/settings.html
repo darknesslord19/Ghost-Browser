@@ -99,6 +99,13 @@ body.solo .ccat .litem { background: rgba(255, 255, 255, .04); border-color: rgb
 body.solo #cStat { background: rgba(22, 26, 38, .78); }
 body.solo input[type=text], body.solo input[type=url], body.solo input[type=password], body.solo textarea { background: rgba(255, 255, 255, .06) !important; border: 1px solid rgba(255, 255, 255, .12) !important; position: relative; z-index: 4; }
 .ctool.grid.g3 > button { font-size: 12.5px; padding: 0 6px; }
+/* ---- sol renk şeridi (durum göstergesi) ---- */
+.litem { padding-left: 22px !important; }
+.litem::before, .litem.solving::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; transform: none; font-size: 0; border-radius: 12px 0 0 12px; background: linear-gradient(180deg, #ffffff30, #ffffff12); box-shadow: inset -1px 0 0 #00000030; animation: none; opacity: 1; z-index: 2; }
+.litem.ok::before { background: linear-gradient(180deg, #4ade80, #16a34a); box-shadow: 0 0 12px #22c55e66, inset -1px 0 0 #00000030; }
+.litem.fail::before { background: linear-gradient(180deg, #fbbf24, #f97316); box-shadow: 0 0 12px #f59e0b55, inset -1px 0 0 #00000030; }
+.litem.solving::before { background: linear-gradient(180deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 100% 300%; box-shadow: 0 0 16px #ec489988; animation: tabflow 1.1s linear infinite; }
+@keyframes tabflow { to { background-position: 0 -300%; } }
 @keyframes cspin { to { transform: rotate(360deg); } }
 .bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
@@ -510,7 +517,7 @@ function renderCrawler(sum, running) {
   });
 }
 function filmRow(f) {
-  const d = document.createElement('div'); d.className = 'litem' + (f.video ? ' ok' : '') + (cCurUrl && cCurUrl === f.url ? ' solving' : ''); d.dataset.url = f.url; d.insertAdjacentHTML('beforeend', '<div class="fb"><i></i></div>');
+  const d = document.createElement('div'); d.className = 'litem' + (f.video ? ' ok' : (f.tried || 0) >= 2 ? ' fail' : '') + (cCurUrl && cCurUrl === f.url ? ' solving' : ''); d.dataset.url = f.url; d.insertAdjacentHTML('beforeend', '<div class="fb"><i></i></div>');
   const tm = f.tmdb || null, poster = (tm && tm.poster) || f.poster || '';
   if (poster) { const im = document.createElement('img'); im.className = 'poster'; im.loading = 'lazy'; im.src = poster; im.alt = ''; im.onerror = () => im.remove(); d.append(im); }
   const t = document.createElement('div'); t.className = 'lt'; const n = document.createElement('div'); n.className = 'ln'; n.textContent = (tm && tm.title) || (f.title || '').replace(/^\d{4}\s+\d+\s+\d(\.\d)?\s+/, '').replace(/^\d{4}\s+\d+\s+/, '') || f.url;
