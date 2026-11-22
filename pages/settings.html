@@ -635,19 +635,7 @@ function filmRow(f) {
   const openP = x => ghost.invoke('open', 'ghost://player?src=' + encodeURIComponent(x.video) + '&title=' + encodeURIComponent((tm && tm.title) || f.title || '') + '&ref=' + encodeURIComponent(x.videoRef || f.url), { newTab: true });
   const play = async () => {
     if (!f.video) return ghost.invoke('open', f.url, { newTab: true });
-    const h = window._fh, c = window._fc;
-    if (!h || !c) return openP(f);
-    msg('Taze video bağlantısı alınıyor…');
-    try {
-      await ghost.invoke('crawl-fresh', h, c, f.url);
-      for (let i = 0; i < 40; i++) {
-        await new Promise(r => setTimeout(r, 1500));
-        const fl = await ghost.invoke('crawl-films', h, c); const x = (fl || []).find(u => u.url === f.url);
-        if (x && x.video) { f.video = x.video; f.videoRef = x.videoRef; return openP(x); }
-        if (x && x.tried >= 2) break;
-      }
-    } catch (e) {}
-    msg('Yenilenemedi, eski bağlantı deneniyor'); openP(f);
+    openP(f);
   };
   const fb = document.createElement('div'); fb.className = 'fbar'; fb.innerHTML = '<i></i>'; d.append(fb);
   d.append(t, mk('▶', f.video ? 'Ghost Oynatıcı\'da oynat' : 'Film sayfasını aç', play), mk('⧉', f.video ? 'Video adresini kopyala' : 'Film adresini kopyala', async () => msg(await copyText(f.video || f.url) ? 'Kopyalandı' : 'Kopyalanamadı')), mk('↗', 'Film sayfasını aç', () => ghost.invoke('open', f.url, { newTab: true })));
