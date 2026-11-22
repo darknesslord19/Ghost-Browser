@@ -93,6 +93,12 @@ body.solo { background: transparent !important; }
 .cfail > summary::-webkit-details-marker { display: none; }
 .litem button.rt { color: #fbbf24; }
 .fchip { color: #fbbf24; font-size: 12px; margin-left: 6px; }
+body.solo .card, body.solo .lgrp { background: rgba(24, 28, 40, .62); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 6px 24px #0005; }
+body.solo .ccat { background: rgba(255, 255, 255, .045); border-color: rgba(255, 255, 255, .08); }
+body.solo .ccat .litem { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .07); }
+body.solo #cStat { background: rgba(22, 26, 38, .78); }
+body.solo input[type=text], body.solo input[type=url], body.solo input[type=password], body.solo textarea { background: rgba(255, 255, 255, .06) !important; border: 1px solid rgba(255, 255, 255, .12) !important; position: relative; z-index: 4; }
+.ctool.grid.g3 > button { font-size: 12.5px; padding: 0 6px; }
 @keyframes cspin { to { transform: rotate(360deg); } }
 .bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
@@ -259,7 +265,7 @@ function enhanceSelect(sel) {
   const MODES = [['auto', 'Otomatik'], ['winter', 'Kış'], ['spring', 'Bahar'], ['summer', 'Yaz'], ['autumn', 'Sonbahar'], ['holiday', 'Bayram'], ['off', 'Kapalı']];
   const ld = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
   const sv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
-  const st = { mode: ld('fxMode', 'auto'), eco: ld('fxEco', '0') === '1', density: .55, speed: 1 };
+  const st = { mode: ld('fxMode', 'auto'), eco: ld('fxEco', '0') === '1', density: .5, speed: 1, paused: false };
   const cv = document.getElementById('fx'), ctx = cv.getContext('2d');
   let W = 0, H = 0, DPR = 1, parts = [], rockets = [], cur = null;
   const R = (a, b) => a + Math.random() * (b - a), pick = a => a[(Math.random() * a.length) | 0];
@@ -282,7 +288,8 @@ function enhanceSelect(sel) {
   function frame(now) {
     requestAnimationFrame(frame);
     if (!document.body.classList.contains('solo')) return;
-    if (now - last < (st.eco ? 1000 / 30 : 0)) return;
+    if (st.paused || document.hidden) { last = now; return; }
+    if (now - last < 1000 / (st.eco ? 20 : 30)) return;
     let dt = Math.min(.05, (now - last) / 1000); last = now; tAbs += dt; ctx.clearRect(0, 0, W, H);
     if (!cur) return; dt *= st.speed;
     if (cur === 'holiday') {
@@ -300,9 +307,12 @@ function enhanceSelect(sel) {
       else if (p.k === 'summer') { p.a += p.va * dt + Math.sin(p.ph) * .02; p.x += Math.cos(p.a) * p.sp * dt; p.y += Math.sin(p.a) * p.sp * dt * .8; if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20; if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20; fly(p, tAbs); }
     }
   }
-  function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); rebuild(); }
+  function resize() { DPR = 1; W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); rebuild(); }
   function apply() { const pv = cur; cur = eff(); if (document.body.classList.contains('solo')) document.documentElement.style.background = cur ? SEASONS[cur].sky : '#0e1214'; if (pv !== cur) rebuild(); }
   window.FX = { MODES, mode: () => st.mode, eco: () => st.eco, label: () => (MODES.find(m => m[0] === st.mode) || [0, ''])[1], setMode(m) { st.mode = m; sv('fxMode', m); apply(); }, setEco(v) { st.eco = !!v; sv('fxEco', v ? '1' : '0'); rebuild(); } };
+  const isIn = e => e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+  addEventListener('focusin', e => { if (isIn(e)) { st.paused = true; ctx.clearRect(0, 0, W, H); } });
+  addEventListener('focusout', e => { if (isIn(e)) st.paused = false; });
   addEventListener('resize', resize); resize(); apply(); requestAnimationFrame(frame);
 })();
 </script>
@@ -472,7 +482,7 @@ function renderCrawler(sum, running) {
       const fill = async () => {
         body.innerHTML = ''; const fl = await ghost.invoke('crawl-films', s.host, c.url); let shown = 0;
         const bt = document.createElement('div'); bt.className = 'ctool grid g3';
-        bt.append(cBtn('Bu kategoriyi tara', async () => { const r = await ghost.invoke('crawl-list', s.host, [c.url], cPg); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
+        bt.append(cBtn('Burayı tara', async () => { const r = await ghost.invoke('crawl-list', s.host, [c.url], cPg); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
           cBtn('Videoları çöz', async () => { const r = await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); if (r) msg(r); cLastSig = ''; refreshCrawler(); }, 'primary'),
           cBtn('Tanı kopyala', async () => { const t = await ghost.invoke('crawl-log', s.host, c.url); msg(await copyText(c.url + '\\n' + t) ? 'Tanı kopyalandı' : 'Kopyalanamadı'); }));
         body.append(bt);

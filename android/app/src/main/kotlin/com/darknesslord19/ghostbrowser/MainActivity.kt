@@ -1176,20 +1176,30 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         val accept = req.requestHeaders["Accept"] ?: ""
         val isImg = accept.contains("image") || Regex("\\.(jpe?g|png|webp|gif|avif|svg)(\\?|#|$)", RegexOption.IGNORE_CASE).containsMatchIn(u.toString())
         if (!isImg) return null
-        return try {
-            val c = URL(u.toString()).openConnection() as HttpURLConnection
-            c.connectTimeout = 10000
-            c.readTimeout = 15000
-            c.instanceFollowRedirects = true
-            c.setRequestProperty("User-Agent", req.requestHeaders["User-Agent"] ?: "Mozilla/5.0")
-            c.setRequestProperty("Referer", u.scheme + "://" + u.authority + "/")
-            val code = c.responseCode
-            if (code >= 400) return null
-            val mime = (c.contentType ?: "image/jpeg").substringBefore(';').trim()
-            WebResourceResponse(mime, null, code, "OK", mapOf("Access-Control-Allow-Origin" to "*"), c.inputStream)
-        } catch (e: Exception) {
-            null
+        val host = u.host ?: return null
+        val labels = host.split('.')
+        val base = if (labels.size > 2) labels.drop(1).joinToString(".") else host
+        val refs = LinkedHashSet<String>()
+        refs.add(u.scheme + "://" + u.authority + "/")
+        refs.add(u.scheme + "://www." + base + "/")
+        refs.add(u.scheme + "://" + base + "/")
+        for (ref in refs) {
+            try {
+                val c = URL(u.toString()).openConnection() as HttpURLConnection
+                c.connectTimeout = 10000
+                c.readTimeout = 15000
+                c.instanceFollowRedirects = true
+                c.setRequestProperty("User-Agent", req.requestHeaders["User-Agent"] ?: "Mozilla/5.0")
+                c.setRequestProperty("Referer", ref)
+                c.setRequestProperty("Accept", "image/avif,image/webp,image/*,*/*;q=0.8")
+                val code = c.responseCode
+                if (code >= 400) { c.disconnect(); continue }
+                val mime = (c.contentType ?: "image/jpeg").substringBefore(';').trim()
+                return WebResourceResponse(mime, null, code, "OK", mapOf("Access-Control-Allow-Origin" to "*"), c.inputStream)
+            } catch (e: Exception) {
+            }
         }
+        return null
     }
 
     /** Oynatıcı sayfasının istekleri: Referer/Origin ekle + CORS izni ver. */
