@@ -1425,6 +1425,8 @@ while((m=re.exec(h))){const p=m[0];const seg=p.split('/').pop().toLowerCase();
  if(mm[1]!==base.toLowerCase())continue;add(p,parseInt(mm[2]),parseInt(mm[3]))}
 const re2=/\/[a-z0-9_\-\/.%]*?(\d{1,2})-sezon[\/-](\d{1,3})-bolum[a-z0-9_\-.]*/gi;
 while((m=re2.exec(h))){const p=m[0].split('#')[0].split('?')[0];if(slug&&p.toLowerCase().indexOf('/'+slug+'/')<0&&p.toLowerCase().indexOf('/'+slug+'-'+parseInt(m[1])+'-sezon')<0)continue;add(p,parseInt(m[1]),parseInt(m[2]))}
+const re3=/\/[a-z0-9_\-\/.%]*?\/(?:bolum|episode|ep)-(\d{1,4})(?=["'\\?\s<#&])/gi;
+while((m=re3.exec(h))){const p=m[0];if(slug&&p.toLowerCase().indexOf('/'+slug+'/')<0)continue;add(p,1,parseInt(m[1]))}
 out.sort((a,b)=>a.s-b.s||a.e-b.e);
 return JSON.stringify(out)}catch(e){return '[]'}})()"""
 
