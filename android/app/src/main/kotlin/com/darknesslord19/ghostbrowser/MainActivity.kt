@@ -31,6 +31,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.util.Base64
 import android.webkit.GeolocationPermissions
 import android.webkit.JsResult
 import android.webkit.PermissionRequest
@@ -78,6 +79,16 @@ const gr=window.__gr=window.__gr||[];const of=window.fetch;if(of)window.fetch=fu
 const xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{const U=String(u);send(U);if(gr.length<200)gr.push(U);this.addEventListener('load',()=>{try{let t='';if(this.responseType===''||this.responseType==='text')t=(this.responseText||'').slice(0,4096);else if(this.responseType==='arraybuffer'&&this.response)t=new TextDecoder().decode(new Uint8Array(this.response,0,Math.min(4096,this.response.byteLength)));const k=head(t);if(k)send(U,1,k==2,t)}catch(e){}})}catch(e){}return xo.apply(this,arguments)};
 const scan=()=>{try{document.querySelectorAll('video,source').forEach(e=>{send(e.currentSrc);send(e.src);send(e.getAttribute('src'))})}catch(e){}};
 setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
+})();"""
+        val FETCH_JS = """(()=>{if(window===window.top||window.__gf)return;window.__gf=1;
+const post=o=>{try{GhostFetch.postMessage(JSON.stringify(o))}catch(e){}};
+const b64=u=>{let s='';const n=0x8000;for(let i=0;i<u.length;i+=n)s+=String.fromCharCode.apply(null,u.subarray(i,i+n));return btoa(s)};
+try{GhostFetch.onmessage=async e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}
+try{const o={credentials:'include'};if(m.range)o.headers={Range:m.range};const r=await fetch(m.url,o);const ab=new Uint8Array(await r.arrayBuffer());
+post({id:m.id,h:1,s:r.status,ct:r.headers.get('content-type')||'',cr:r.headers.get('content-range')||''});
+const N=300000;for(let i=0;i<ab.length;i+=N)post({id:m.id,d:b64(ab.subarray(i,i+N))});
+post({id:m.id,last:1})}catch(err){post({id:m.id,err:String(err)})}}}catch(e){}
+post({hello:1});
 })();"""
         val DIRECT_RE = Regex("^https?://\\S+\\.(mp4|m3u8|webm|mkv|mov|m4v)(\\?\\S*)?(#.*)?\$", RegexOption.IGNORE_CASE)
     }
@@ -179,6 +190,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 return t
             }
             override fun release(t: Tab) {
+                frameProxies.clear()
                 t.onFinished = null
                 try { t.webView.stopLoading() } catch (_: Exception) {}
                 holder.removeView(t.webView)
@@ -1055,6 +1067,21 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                     } catch (_: Exception) {}
                 }
                 WebViewCompat.addDocumentStartJavaScript(wv, SNIFF_JS, setOf("*"))
+                WebViewCompat.addWebMessageListener(wv, "GhostFetch", setOf("*")) { _, message, origin, isMain, reply ->
+                    try {
+                        val o = JSONObject(message.data ?: "")
+                        if (o.optBoolean("hello") || o.optInt("hello") == 1) {
+                            if (!isMain) origin.host?.let { frameProxies[it] = reply }
+                        } else {
+                            val fr = frameReqs[o.optString("id")] ?: return@addWebMessageListener
+                            if (o.has("err")) { fr.err = o.optString("err"); fr.latch.countDown() }
+                            else if (o.optInt("h") == 1) { fr.status = o.optInt("s"); fr.ct = o.optString("ct"); fr.cr = o.optString("cr") }
+                            else if (o.has("d")) fr.buf.write(Base64.decode(o.optString("d"), Base64.DEFAULT))
+                            else if (o.optInt("last") == 1) fr.latch.countDown()
+                        }
+                    } catch (_: Exception) {}
+                }
+                WebViewCompat.addDocumentStartJavaScript(wv, FETCH_JS, setOf("*"))
             } catch (_: Exception) {}
         }
 
@@ -1273,6 +1300,44 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
     }
 
     /** Oynatıcı sayfasının istekleri: Referer/Origin ekle + CORS izni ver. */
+    private class FrameReq {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        @Volatile var status = 0
+        @Volatile var ct = ""
+        @Volatile var cr = ""
+        @Volatile var err = ""
+        val buf = java.io.ByteArrayOutputStream()
+    }
+    private val frameProxies = java.util.concurrent.ConcurrentHashMap<String, JavaScriptReplyProxy>()
+    private val frameReqs = java.util.concurrent.ConcurrentHashMap<String, FrameReq>()
+    private val frameSeq = java.util.concurrent.atomic.AtomicInteger()
+
+    private fun fetchViaFrame(req: WebResourceRequest, cors: HashMap<String, String>): WebResourceResponse? {
+        val host = req.url.host ?: return null
+        val fp = frameProxies[host] ?: return null
+        val id = "f" + frameSeq.incrementAndGet()
+        val fr = FrameReq()
+        frameReqs[id] = fr
+        try {
+            val m = JSONObject().put("id", id).put("url", req.url.toString())
+            req.requestHeaders["Range"]?.let { m.put("range", it) }
+            fp.postMessage(m.toString())
+            if (!fr.latch.await(25, java.util.concurrent.TimeUnit.SECONDS) || fr.err.isNotEmpty() || fr.status == 0) {
+                frameProxies.remove(host)
+                return null
+            }
+            val h = HashMap<String, String>(cors)
+            if (fr.cr.isNotEmpty()) h["Content-Range"] = fr.cr
+            val mime = fr.ct.substringBefore(';').trim().ifEmpty { "application/octet-stream" }
+            return WebResourceResponse(mime, null, fr.status, if (fr.status == 206) "Partial Content" else "OK", h, java.io.ByteArrayInputStream(fr.buf.toByteArray()))
+        } catch (_: Exception) {
+            frameProxies.remove(host)
+            return null
+        } finally {
+            frameReqs.remove(id)
+        }
+    }
+
     private fun proxyRequest(tab: Tab, req: WebResourceRequest): WebResourceResponse? {
         val cors = HashMap<String, String>()
         cors["Access-Control-Allow-Origin"] = "*"
@@ -1281,6 +1346,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         cors["Access-Control-Expose-Headers"] = "*"
         if (req.method == "OPTIONS") return WebResourceResponse("text/plain", "utf-8", 204, "No Content", cors, ByteArrayInputStream(ByteArray(0)))
         if (req.method != "GET" && req.method != "HEAD") return null
+        fetchViaFrame(req, cors)?.let { return it }
         return try {
             val c = URL(req.url.toString()).openConnection() as HttpURLConnection
             c.connectTimeout = 15000

@@ -108,11 +108,23 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         gen++
         status = msg
         jobs.clear()
-        tab?.let { host.release(it) }
+        tab?.let {
+            if (keepNext) {
+                keepNext = false
+                keptTab?.let { k -> host.release(k) }
+                keptTab = it
+                main.removeCallbacks(keptRel)
+                main.postDelayed(keptRel, 15 * 60 * 1000L)
+            } else host.release(it)
+        }
         tab = null
         host.awake(false)
         schedule()
     }
+
+    @Volatile private var keepNext = false
+    private var keptTab: Tab? = null
+    private val keptRel = Runnable { keptTab?.let { host.release(it) }; keptTab = null }
 
     fun stop() {
         if (running) finish("Durduruldu")
@@ -250,6 +262,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     }
 
     fun fresh(h: String, catUrl: String, url: String): Boolean {
+        keepNext = true
         val cat = findCat(h, catUrl) ?: return false
         val fl = cat.optJSONArray("films") ?: return false
         for (k in 0 until fl.length()) {
