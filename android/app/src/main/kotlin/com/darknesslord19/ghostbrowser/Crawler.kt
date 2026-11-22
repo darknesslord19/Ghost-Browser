@@ -343,6 +343,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         var probeStage = 0
         var triedStart = false
         var startUrl = ""
+        var startAdded = 0
+        var rewound = false
         var probePage = 2
         var probeBase = ""
 
@@ -526,20 +528,25 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 log("probe p1 added=$added total=" + films.length())
                 return finish(true, "")
             }
-            if (!triedStart && pages == 0 && added > 0 && added <= 40 && next.isEmpty() && !nc && !url.contains("page=")) {
+            if (!triedStart && pages == 0 && added > 0 && added <= 40 && next.isEmpty() && !url.contains("page=")) {
                 triedStart = true
                 startUrl = url
+                startAdded = added
                 log("az film var ($added), ?page=1 deneniyor")
                 url = url.substringBefore('#') + (if (url.contains('?')) "&" else "?") + "page=1"
                 step(500, g) { page() }
                 return
             }
-            if (triedStart && pages == 0 && added == 0 && startUrl.isNotEmpty()) {
-                log("?page=1 sonuç vermedi, ilk adrese dönülüyor")
-                url = startUrl
+            if (triedStart && startUrl.isNotEmpty() && pages == 0) {
+                val back = startUrl
                 startUrl = ""
-                step(500, g) { page() }
-                return
+                if (added < maxOf(3, startAdded / 2)) {
+                    log("?page=1 daha iyi değil, ilk adrese dönülüyor")
+                    rewound = true
+                    url = back
+                    step(500, g) { page() }
+                    return
+                }
             }
             pages++
             log("p$pages url=" + url.takeLast(60) + " films=" + films.length() + " added=$added next=" + next.takeLast(60) + " last=$last nc=$nc")
@@ -551,7 +558,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 if (pages >= j.n) return finish(false, next)
                 url = next
                 step(700, g) { page() }
-            } else if (next.isEmpty() && nc && added > 0 && clicks < 800) {
+            } else if (next.isEmpty() && nc && (added > 0 || rewound || pages == 1) && clicks < 800) {
                 if (pages >= j.n) return finish(false, "")
                 clicks++
                 evalJs(CLICKNEXT_JS, g) { ok ->
