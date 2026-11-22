@@ -471,13 +471,15 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         return ok.firstOrNull { it.kind == "HLS ★" } ?: ok.firstOrNull() ?: t.media.firstOrNull()
     }
 
+    private fun isSeries(u: String): Boolean = Regex("^https?://[^/]+/(series|dizi|diziler|show|tv-series)/", RegexOption.IGNORE_CASE).containsMatchIn(u)
+
     private fun runResolve(j: Job, g: Int, done: () -> Unit) {
         val cat = findCat(j.site, j.cat) ?: return done()
         val films = cat.optJSONArray("films") ?: return done()
         val todo = ArrayList<JSONObject>()
         for (i in 0 until films.length()) {
             val f = films.getJSONObject(i)
-            if (f.optString("video").isEmpty() && f.optInt("tried") != 1) todo.add(f)
+            if (f.optString("video").isEmpty() && f.optInt("tried") != 1 && !(f.has("eps") && f.optInt("eps") > 0)) todo.add(f)
             if (todo.size >= j.n) break
         }
         var idx = 0
@@ -492,6 +494,39 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             prog = idx
             curTitle = f.optString("title")
             status = prefix() + "Video çözülüyor " + idx + "/" + todo.size
+            if (isSeries(f.optString("url")) && !f.has("eps")) {
+                status = prefix() + "Bölümler aranıyor " + idx + "/" + todo.size
+                load(f.optString("url"), g) {
+                    step(1200, g) {
+                        val base = f.optString("url").trimEnd('/').substringAfterLast('/').substringBefore('?').replace(Regex("-c\\d+${'$'}"), "")
+                        evalJs(epsJs(base), g) { r ->
+                            var n = 0
+                            try {
+                                val ea = JSONArray(r ?: "[]")
+                                val have = HashSet<String>()
+                                for (i in 0 until films.length()) have.add(films.getJSONObject(i).optString("url"))
+                                for (i in 0 until ea.length()) {
+                                    val e = ea.getJSONObject(i)
+                                    if (!have.add(e.optString("u"))) continue
+                                    val nm = f.optString("title") + " S" + String.format("%02d", e.optInt("s")) + "E" + String.format("%02d", e.optInt("e"))
+                                    val ef = JSONObject().put("title", nm).put("url", e.optString("u")).put("poster", f.optString("poster")).put("video", "").put("videoRef", "")
+                                        .put("series", f.optString("title")).put("season", e.optInt("s")).put("episode", e.optInt("e"))
+                                    films.put(ef)
+                                    todo.add(ef)
+                                    n++
+                                }
+                            } catch (_: Exception) {
+                            }
+                            f.put("eps", n)
+                            if (n == 0) f.put("tried", 1)
+                            progTotal = todo.size
+                            schedule()
+                            step(80, g) { nextFilm() }
+                        }
+                    }
+                }
+                return
+            }
             load(f.optString("url"), g) {
                 val t = tab
                 if (t == null) {
@@ -610,7 +645,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             val fl = cat.optJSONArray("films") ?: continue
             for (k in 0 until fl.length()) {
                 val f = fl.getJSONObject(k)
-                if (!f.has("tmdb") && f.optInt("tmdbTried") != 1) todo.add(f)
+                if (!f.has("tmdb") && !f.has("series") && f.optInt("tmdbTried") != 1) todo.add(f)
             }
         }
         if (todo.isEmpty()) return "Bilgi çekilecek film yok"
@@ -735,7 +770,9 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 val tm = f.optJSONObject("tmdb")
                 val title = (tm?.optString("title")?.ifEmpty { null } ?: cleanTitle(f.optString("title")).first).replace(Regex("[\\r\\n]+"), " ")
                 val logo = (tm?.optString("poster")?.ifEmpty { null } ?: f.optString("poster")).replace("\"", "")
-                sb.append("#EXTINF:-1 tvg-name=\"").append(title.replace("\"", "'")).append("\" tvg-logo=\"").append(logo).append("\" group-title=\"").append(grp).append("\",").append(title).append('\n')
+                val g2 = if (f.has("series")) grp + " > " + f.optString("series").replace("\"", "'") else grp
+                val title2 = if (f.has("series")) f.optString("title") else title
+                sb.append("#EXTINF:-1 tvg-name=\"").append(title2.replace("\"", "'")).append("\" tvg-logo=\"").append(logo).append("\" group-title=\"").append(g2).append("\",").append(title2).append('\n')
                 val ref = f.optString("videoRef")
                 if (ref.isNotEmpty()) sb.append("#EXTVLCOPT:http-referrer=").append(ref).append('\n')
                 sb.append(v).append('\n')
@@ -928,6 +965,20 @@ window.__gpage=(window.__gpage||1)+1;
 try{e.scrollIntoView({block:'center'})}catch(x){}
 e.click();return '1';
 }catch(e){return '0'}})()"""
+
+        /** Dizi sayfasındaki tüm bölüm adreslerini (…-3x5 gibi) bulur; sayfa kaynağında geçenleri alır. */
+        fun epsJs(base: String): String = """(()=>{try{
+const base=""" + org.json.JSONObject.quote(base) + """;
+const h=document.documentElement.outerHTML.split('\\/').join('/');
+const re=/\/[a-z0-9_\-\/]*?\d{1,2}x\d{1,3}(?:-c\d+)?(?=["'\\?\s<#&])/gi;
+const seen={};const out=[];let m;
+while((m=re.exec(h))){const p=m[0];const seg=p.split('/').pop().toLowerCase();
+ const mm=seg.match(/^(.*?)-(\d{1,2})x(\d{1,3})(?:-c\d+)?${'$'}/);if(!mm)continue;
+ if(mm[1]!==base.toLowerCase())continue;
+ const s=parseInt(mm[2]),e=parseInt(mm[3]);const k=s+'x'+e;if(seen[k])continue;seen[k]=1;
+ out.push({u:location.origin+p,s:s,e:e})}
+out.sort((a,b)=>a.s-b.s||a.e-b.e);
+return JSON.stringify(out)}catch(e){return '[]'}})()"""
 
         /** Tıklamadan sonra sitenin kendi sayfalama isteğini (ör. /load/page/2/...) bulup {n} kalıbına çevirir. */
         val TPL_JS = """(()=>{try{
