@@ -227,6 +227,24 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
     fun list(h: String, urls: JSONArray, maxPages: Int): String = queue("list", h, urls, maxPages.coerceIn(1, 5000))
 
+    /** Çözülemeyen (denenmiş, videosu yok) filmleri yeniden denenebilir hale getirir. films boşsa kategorideki hepsi. */
+    fun retry(h: String, catUrl: String, films: JSONArray): Int {
+        val cat = findCat(h, catUrl) ?: return 0
+        val fl = cat.optJSONArray("films") ?: return 0
+        val want = HashSet<String>()
+        for (i in 0 until films.length()) want.add(films.getString(i))
+        var n = 0
+        for (k in 0 until fl.length()) {
+            val f = fl.getJSONObject(k)
+            if (f.optString("video").isEmpty() && f.optInt("tried") >= 1 && (want.isEmpty() || want.contains(f.optString("url")))) {
+                f.put("tried", 0).put("retry", 1)
+                n++
+            }
+        }
+        schedule()
+        return n
+    }
+
     fun resolve(h: String, urls: JSONArray, limit: Int): String = queue("resolve", h, urls, limit.coerceIn(1, 100000))
 
     private fun startJobs() {
@@ -494,11 +512,17 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         val cat = findCat(j.site, j.cat) ?: return done()
         val films = cat.optJSONArray("films") ?: return done()
         val todo = ArrayList<JSONObject>()
-        for (i in 0 until films.length()) {
-            val f = films.getJSONObject(i)
-            if (f.optString("video").isEmpty() && f.optInt("tried") < 2 && !(f.has("eps") && f.optInt("eps") > 0)) todo.add(f)
-            if (todo.size >= j.n) break
+        for (pass in 0..1) {
+            for (i in 0 until films.length()) {
+                val f = films.getJSONObject(i)
+                if (todo.size >= j.n) break
+                if (todo.contains(f)) continue
+                val rt = f.has("retry")
+                if ((pass == 0) != rt) continue
+                if (f.optString("video").isEmpty() && f.optInt("tried") < 2 && !(f.has("eps") && f.optInt("eps") > 0)) todo.add(f)
+            }
         }
+        for (f in todo) f.remove("retry")
         var idx = 0
         phase = "resolve"
         curCat = j.cat
@@ -753,14 +777,16 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 val c = src.getJSONObject(i)
                 val fl = c.optJSONArray("films") ?: JSONArray()
                 var res = 0
+                var failed = 0
                 var info = 0
                 for (k in 0 until fl.length()) {
                     val fo = fl.getJSONObject(k)
                     if (fo.optString("video").isNotEmpty()) res++
+                    else if (fo.optInt("tried") >= 2) failed++
                     if (fo.has("tmdb")) info++
                 }
                 ca.put(JSONObject().put("name", c.optString("name")).put("group", c.optString("group")).put("url", c.optString("url"))
-                    .put("films", fl.length()).put("resolved", res).put("info", info).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")).put("total", c.optInt("totalPages")))
+                    .put("films", fl.length()).put("resolved", res).put("failed", failed).put("info", info).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")).put("total", c.optInt("totalPages")))
             }
             out.put(JSONObject().put("host", h).put("url", s.optString("url")).put("title", s.optString("title")).put("time", s.optLong("time")).put("cats", ca))
         }

@@ -83,6 +83,16 @@ button.sel::after { content: '▾'; opacity: .6; }
 body.solo { background: transparent !important; }
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; display: none; }
 .solo #fx { display: block; }
+.ctool.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; padding: 10px 12px; align-items: stretch; }
+.ctool.grid.g3 { grid-template-columns: repeat(3, 1fr); }
+.ctool.grid > button, .ctool.grid > .sel { width: 100%; min-width: 0; height: 42px; border-radius: 12px; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; }
+.ctool.grid > .sel { justify-content: space-between; }
+.ctool.grid > .wide { grid-column: 1 / -1; }
+.cfail { margin: 8px 10px; border: 1px solid #f59e0b44; border-radius: 14px; background: #f59e0b0d; overflow: hidden; }
+.cfail > summary { padding: 11px 12px; cursor: pointer; font-weight: 600; color: #fbbf24; list-style: none; display: flex; justify-content: space-between; }
+.cfail > summary::-webkit-details-marker { display: none; }
+.litem button.rt { color: #fbbf24; }
+.fchip { color: #fbbf24; font-size: 12px; margin-left: 6px; }
 @keyframes cspin { to { transform: rotate(360deg); } }
 .bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
@@ -427,7 +437,7 @@ function renderCrawler(sum, running) {
     det.ontoggle = () => { det.open ? cOpen.add('s:' + s.host) : cOpen.delete('s:' + s.host); };
     const films = s.cats.reduce((a, c) => a + c.films, 0), vids = s.cats.reduce((a, c) => a + c.resolved, 0);
     const sum0 = document.createElement('summary'); sum0.innerHTML = '<span class="lh"></span><b></b><em></em>'; sum0.querySelector('.lh').textContent = s.host.charAt(0).toUpperCase(); sum0.querySelector('b').textContent = s.host; sum0.querySelector('em').textContent = s.cats.length + ' kategori · ' + films + ' film · ' + vids + ' video'; det.append(sum0);
-    const tool = document.createElement('div'); tool.className = 'ctool';
+    const tool = document.createElement('div'); tool.className = 'ctool grid';
     const pg = cSelect([[3, '3 sayfa'], [10, '10 sayfa'], [30, '30 sayfa'], [200, 'Tüm sayfalar']], cPg, v => { cPg = v; });
     const lim = cSelect([[10, '10 video'], [50, '50 video'], [200, '200 video'], [100000, 'Tümü']], cLim, v => { cLim = v; });
     const picked = () => s.cats.map(c => c.url).filter(u => cSel.has(u));
@@ -435,7 +445,7 @@ function renderCrawler(sum, running) {
     tool.append(pg, cBtn('Seçilenleri listele', () => run('crawl-list', cPg), 'primary'), lim, cBtn('Videoları çöz', () => run('crawl-resolve', cLim)));
     if (cKey) tool.append(cBtn('TMDB bilgisi çek', async () => { const r = await ghost.invoke('crawl-enrich', s.host, picked()); if (r) msg(r); refreshCrawler(); }));
     det.append(tool);
-    const tool2 = document.createElement('div'); tool2.className = 'ctool';
+    const tool2 = document.createElement('div'); tool2.className = 'ctool grid';
     tool2.append(
       cBtn('Hepsini seç', () => { const all = s.cats.every(c => cSel.has(c.url)); s.cats.forEach(c => all ? cSel.delete(c.url) : cSel.add(c.url)); cLastSig = ''; refreshCrawler(); }),
       cBtn('JSON kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save', s.host)); } catch (e) { msg(e.message); } }),
@@ -455,17 +465,28 @@ function renderCrawler(sum, running) {
         if (cb.checked && !c.done) { const r = await ghost.invoke('crawl-list', s.host, [c.url], cPg); if (r) msg(r); else if ($('#cAuto').checked) await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); cLastSig = ''; refreshCrawler(); }
       };
       const nm = document.createElement('span'); nm.className = 'cn'; nm.textContent = (c.group ? c.group + ' › ' : '') + c.name;
-      const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.total ? ' · ' + Math.min(c.pages, c.total) + '/' + c.total + ' sayfa' : '') + (c.done ? ' ✓' : '') : 'taranmadı';
+      const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.total ? ' · ' + Math.min(c.pages, c.total) + '/' + c.total + ' sayfa' : '') + (c.failed ? ' · ⚠ ' + c.failed : '') + (c.done ? ' ✓' : '') : 'taranmadı';
       const sp = document.createElement('span'); sp.className = 'spin'; sm.append(cb, nm, sp, ct); cd.append(sm);
       const prev = cCounts[s.host + c.url]; if (prev !== undefined && prev !== c.films) { ct.classList.add('pulse'); } cCounts[s.host + c.url] = c.films;
       const body = document.createElement('div'); cd.append(body);
       const fill = async () => {
         body.innerHTML = ''; const fl = await ghost.invoke('crawl-films', s.host, c.url); let shown = 0;
-        const bt = document.createElement('div'); bt.className = 'ctool h';
+        const bt = document.createElement('div'); bt.className = 'ctool grid g3';
         bt.append(cBtn('Bu kategoriyi tara', async () => { const r = await ghost.invoke('crawl-list', s.host, [c.url], cPg); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
           cBtn('Videoları çöz', async () => { const r = await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); if (r) msg(r); cLastSig = ''; refreshCrawler(); }, 'primary'),
           cBtn('Tanı kopyala', async () => { const t = await ghost.invoke('crawl-log', s.host, c.url); msg(await copyText(c.url + '\\n' + t) ? 'Tanı kopyalandı' : 'Kopyalanamadı'); }));
         body.append(bt);
+        const failed = fl.filter(f => !f.video && (f.tried || 0) >= 2);
+        if (failed.length) {
+          const fd = document.createElement('details'); fd.className = 'cfail'; fd.open = cOpen.has('f:' + key);
+          const fs = document.createElement('summary'); fs.innerHTML = '<span>⚠ Çözülemeyenler</span><span>' + failed.length + '</span>'; fd.append(fs);
+          fd.ontoggle = () => { fd.open ? cOpen.add('f:' + key) : cOpen.delete('f:' + key); };
+          const ft = document.createElement('div'); ft.className = 'ctool grid';
+          ft.append(Object.assign(cBtn('Hepsini tekrar dene (' + failed.length + ')', async () => { await ghost.invoke('crawl-retry', s.host, c.url, []); const r = await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); if (r) msg(r); cLastSig = ''; refreshCrawler(); }, 'primary'), { className: 'primary wide' }));
+          fd.append(ft);
+          failed.slice(0, 150).forEach(f => { const row = filmRow(f); const rb = document.createElement('button'); rb.textContent = '↻'; rb.title = 'Tekrar dene'; rb.className = 'rt'; rb.onclick = async () => { await ghost.invoke('crawl-retry', s.host, c.url, [f.url]); const r = await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); if (r) msg(r); cLastSig = ''; refreshCrawler(); }; row.append(rb); fd.append(row); });
+          body.append(fd);
+        }
         const more = () => { fl.slice(shown, shown + 150).forEach(f => body.insertBefore(filmRow(f), moreBtn)); shown = Math.min(fl.length, shown + 150); moreBtn.style.display = shown < fl.length ? '' : 'none'; moreBtn.textContent = 'Daha fazla (' + (fl.length - shown) + ')'; };
         const moreBtn = cBtn('Daha fazla', more); moreBtn.style.margin = '8px 12px'; body.append(moreBtn);
         if (!fl.length) body.insertBefore(Object.assign(document.createElement('div'), { className: 'dim', textContent: 'Bu kategori henüz taranmadı.' }), moreBtn);
