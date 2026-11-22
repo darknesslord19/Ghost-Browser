@@ -16,6 +16,7 @@ class Tab(val id: Int, val webView: WebView) {
     @Volatile var url: String = ""
     @Volatile var pageHost: String = ""
     @Volatile var playerRef: String = ""
+    @Volatile var lockUrl: String = ""
     var title: String = "Yeni sekme"
     var loading = false
     var lastPopup = 0L

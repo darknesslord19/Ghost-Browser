@@ -1128,6 +1128,7 @@ post({hello:1});
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val u = request.url.toString()
+                if (tab.hidden && tab.lockUrl.isNotEmpty() && request.isForMainFrame && u.substringBefore("#") != tab.lockUrl) return true
                 if (u.startsWith("http://") || u.startsWith("https://") || u.startsWith("about:") || u.startsWith("data:") || u.startsWith("blob:")) return false
                 if (u.startsWith("ghost://")) {
                     loadIn(tab, u)

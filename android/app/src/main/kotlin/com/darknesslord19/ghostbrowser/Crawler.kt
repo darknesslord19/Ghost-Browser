@@ -135,6 +135,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     private fun load(url: String, g: Int, done: () -> Unit) {
         val t = ensureTab()
         t.media.clear()
+        t.lockUrl = ""
         var finished = false
         val fin = {
             if (!finished) {
@@ -708,6 +709,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     var chal = 0
                     lateinit var pollRef: () -> Unit
                     fun cont() {
+                        if (waited >= 1500 && ensureTab().lockUrl.isEmpty()) ensureTab().lockUrl = ensureTab().url.substringBefore("#")
                         if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000 || waited == 20000 || waited == 27000) evalJs(CLICK_JS, g) { tap(it) }
                         if (waited >= 20000) return fail()
                         step(300, g) { pollRef() }
