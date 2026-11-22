@@ -18,6 +18,8 @@ class Tab(val id: Int, val webView: WebView) {
     var loading = false
     var lastPopup = 0L
     var asked = ""
+    var hidden = false
+    var onFinished: (() -> Unit)? = null
     var cx = 300f
     var cy = 300f
     val media = ArrayList<MediaItem>()

@@ -16,6 +16,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
@@ -84,6 +85,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
     private lateinit var store: Store
     private lateinit var history: History
     private lateinit var links: Links
+    private lateinit var crawler: Crawler
     private lateinit var adblock: AdBlock
     private lateinit var remote: RemoteServer
     private lateinit var assetLoader: WebViewAssetLoader
@@ -132,6 +134,44 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         store = Store(this, isTv)
         history = History(this)
         links = Links(this)
+        crawler = Crawler(this, object : CrawlHost {
+            override fun hiddenTab(): Tab {
+                val wv = WebView(this@MainActivity)
+                val t = Tab(++seq, wv)
+                t.hidden = true
+                configure(t)
+                wv.alpha = 0.01f
+                wv.isFocusable = false
+                wv.isClickable = false
+                holder.addView(wv, 0, FrameLayout.LayoutParams(dp(360), dp(640)))
+                return t
+            }
+            override fun release(t: Tab) {
+                t.onFinished = null
+                try { t.webView.stopLoading() } catch (_: Exception) {}
+                holder.removeView(t.webView)
+                try { t.webView.destroy() } catch (_: Exception) {}
+            }
+            override fun awake(on: Boolean) {
+                if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                else if (!immersive || customView == null) window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+            override fun saveText(name: String, text: String): String {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    val cv = android.content.ContentValues()
+                    cv.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
+                    cv.put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+                    val uri = contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv) ?: throw RuntimeException("Dosya oluşturulamadı")
+                    contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+                    return "İndirilenler/$name"
+                }
+                val dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: filesDir
+                dir.mkdirs()
+                val f = java.io.File(dir, name)
+                f.writeText(text)
+                return f.absolutePath
+            }
+        }, main, resources.displayMetrics.density)
         adblock = AdBlock(this)
         adblock.enabled = store.bool("adblock")
         adblock.setCustom(store.arr("customBlockHosts"))
@@ -921,13 +961,16 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 }
                 if (tab === cur) progress.visibility = View.GONE
                 if (!url.startsWith(ASSET) && url.startsWith("http")) {
-                    history.add(url, view.title)
+                    if (!tab.hidden) history.add(url, view.title)
                     if (store.bool("adblock") && store.bool("cosmetic") && adblock.cosmeticCss.isNotEmpty()) {
                         view.evaluateJavascript("(function(){var s=document.createElement('style');s.textContent=" + JSONObject.quote(adblock.cosmeticCss) + ";(document.head||document.documentElement).appendChild(s)})()", null)
                     }
                 }
-                updateUi()
-                pushRemote(null)
+                if (!tab.hidden) {
+                    updateUi()
+                    pushRemote(null)
+                }
+                tab.onFinished?.invoke()
             }
 
             override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
@@ -1179,6 +1222,18 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                     reply(true, JSONObject().put("local", n))
                 }
                 "history" -> reply(true, history.recent(minOf(args.optInt(1, 100), 500), args.optString(0)))
+                "crawl-state" -> reply(true, crawler.stateJson())
+                "crawl-sites" -> reply(true, crawler.summary())
+                "crawl-films" -> reply(true, crawler.films(args.optString(0), args.optString(1)))
+                "crawl-discover" -> reply(true, crawler.discover(args.optString(0)))
+                "crawl-addcat" -> reply(true, crawler.addCat(args.optString(0), args.optString(1), args.optString(2)))
+                "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
+                "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
+                "crawl-stop" -> { crawler.stop(); reply(true, true) }
+                "crawl-export" -> reply(true, crawler.export(args.optString(0)))
+                "crawl-save" -> try { reply(true, crawler.saveFile(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }
+                "crawl-import" -> try { reply(true, crawler.import(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "İçe aktarılamadı") }
+                "crawl-remove" -> { crawler.remove(args.optString(0)); reply(true, true) }
                 "links" -> reply(true, links.all())
                 "links-remove" -> { links.remove(args.optString(0)); reply(true, true) }
                 "links-clear" -> { links.clear(); reply(true, true) }
