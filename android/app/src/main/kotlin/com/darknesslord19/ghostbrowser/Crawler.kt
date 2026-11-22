@@ -258,8 +258,6 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         private set
     @Volatile var curUrl = ""
         private set
-    @Volatile var curUrl = ""
-        private set
     private val recentRes = java.util.ArrayDeque<JSONObject>()
 
     private fun recent(): JSONArray {
@@ -513,7 +511,6 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             prog = idx
             curTitle = f.optString("title")
             curUrl = f.optString("url")
-            curUrl = f.optString("url")
             status = prefix() + "Video çözülüyor " + idx + "/" + todo.size
             if (isSeries(f.optString("url")) && !f.has("eps")) {
                 status = prefix() + "Bölümler aranıyor " + idx + "/" + todo.size
@@ -720,7 +717,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
-        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("cur", curTitle).put("curUrl", curUrl).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size)
+        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size)
 
     fun summary(): JSONArray {
         val out = JSONArray()
