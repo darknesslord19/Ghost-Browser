@@ -641,6 +641,12 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             }
         }
         for (f in todo) f.remove("retry")
+        val fast = !host.flag("slowResolve")
+        val inc = if (fast) 150 else 300
+        val fastClicks = intArrayOf(900, 3000, 6000, 10000, 15000, 21000, 28000, 36000)
+        val fastAds = intArrayOf(3000, 6000, 10000, 15000)
+        var ci = 0
+        var ai = 0
         var idx = 0
         phase = "resolve"
         curCat = j.cat
@@ -735,15 +741,17 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     lateinit var pollRef: () -> Unit
                     fun cont() {
                         if (waited >= 1500 && ensureTab().lockUrl.isEmpty()) ensureTab().lockUrl = ensureTab().url.substringBefore("#")
-                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000 || waited == 20000 || waited == 27000 || waited == 34000 || waited == 41000) evalJs(CLICK_JS, g) { tap(it) }
-                        if (waited == 4500 || waited == 9000 || waited == 14000 || waited == 18000) evalJs("((/reklam|advert|skip ad/i.test((document.body?document.body.innerText:'').slice(0,800))||document.querySelectorAll('video').length>0||document.querySelectorAll('iframe').length>0)?'1':'0')", g) { a -> if ((a ?: "").contains("1")) adBusy = true }
+                        if (fast && ci < fastClicks.size && waited >= fastClicks[ci]) { ci++; evalJs(CLICK_JS, g) { tap(it) } }
+                        if (!fast && (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000 || waited == 20000 || waited == 27000 || waited == 34000 || waited == 41000)) evalJs(CLICK_JS, g) { tap(it) }
+                        if (fast && ai < fastAds.size && waited >= fastAds[ai]) { ai++; evalJs("((/reklam|advert|skip ad/i.test((document.body?document.body.innerText:'').slice(0,800))||document.querySelectorAll('video').length>0||document.querySelectorAll('iframe').length>0)?'1':'0')", g) { a -> if ((a ?: "").contains("1")) adBusy = true } }
+                        if (!fast && (waited == 4500 || waited == 9000 || waited == 14000 || waited == 18000)) evalJs("((/reklam|advert|skip ad/i.test((document.body?document.body.innerText:'').slice(0,800))||document.querySelectorAll('video').length>0||document.querySelectorAll('iframe').length>0)?'1':'0')", g) { a -> if ((a ?: "").contains("1")) adBusy = true }
                         if (waited >= (if (adBusy) 45000 else 20000)) return fail()
-                        step(300, g) { pollRef() }
+                        step(inc.toLong(), g) { pollRef() }
                     }
 
                     fun poll() {
                         if (t.media.isNotEmpty()) {
-                            step(800, g) {
+                            step(if (fast) 250 else 800, g) {
                                 val m = pickMedia(t)
                                 if (m != null) {
                                     f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis()).put("tried", 0)
@@ -762,14 +770,14 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                                     status = prefix() + "Doğrulama bekleniyor " + idx + "/" + todo.size
                                     step(500, g) { poll() }
                                 } else {
-                                    waited += 300
+                                    waited += inc
                                     status = prefix() + "Video çözülüyor " + idx + "/" + todo.size
                                     cont()
                                 }
                             }
                             return
                         }
-                        waited += 300
+                        waited += inc
                         cont()
                     }
 

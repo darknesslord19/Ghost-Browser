@@ -184,6 +184,7 @@ post({hello:1});
                 t.hidden = true
                 configure(t)
                 wv.alpha = 0.01f
+                if (!store.bool("slowResolve")) try { wv.settings.blockNetworkImage = true } catch (_: Exception) {}
                 wv.isFocusable = false
                 wv.isClickable = false
                 holder.addView(wv, 0, FrameLayout.LayoutParams(dp(360), dp(640)))

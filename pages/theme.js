@@ -1,4 +1,4 @@
-/* Ghost tema sistemi: 100 tema. localStorage 'gbTheme' (tüm sayfalarda ortak). */
+/* Ghost tema sistemi: 200 tema. localStorage 'gbTheme' (tüm sayfalarda ortak). */
 (function () {
   function hsl(h, s, l) { h = ((h % 360) + 360) % 360; s /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); const x = v => Math.round(v * 255).toString(16).padStart(2, '0'); return '#' + x(f(0)) + x(f(8)) + x(f(4)); }
   const T = [];
@@ -32,6 +32,11 @@
       add('e' + i + (vi ? 'o' : 'k'), name + ' ' + vn, [hsl(h, s * k, L[0]), hsl(h, s * k, L[1]), hsl(h, s * k * .9, L[2]), hsl(h, s * k * .8, L[3]), hsl(h, s * .4, 92), hsl(h, s * .3, 62), hsl(h, Math.min(s + 22, 60), 60), hsl(h + 8, Math.min(s + 14, 52), 68)]);
     });
   });
+  // 50 orta-koyu düz renkli tema + 50 ek düz tema (gradyan yok)
+  const S1 = ['Kadife', 'Akik', 'Obsidyen', 'Kobalt', 'Safir', 'Zümrüt', 'Rubi', 'Ametist', 'Topaz', 'Opal', 'Garnet', 'Turmalin', 'Lapis', 'Malakit', 'Granit', 'Basalt', 'Arduvaz', 'Mermer', 'Kuvars', 'Oniks', 'Fırtına', 'Sis', 'Pus', 'Alacakaranlık', 'Şafak', 'Gölge', 'Dolunay', 'Yıldız Tozu', 'Kor', 'Köz', 'Lagün', 'Körfez', 'Fiyort', 'Vaha', 'Bataklık', 'Çayır', 'Eğrelti', 'Yosun', 'Süngertaşı', 'Kuzey', 'Orkide', 'Frenk Üzümü', 'Erik', 'Böğürtlen', 'Kiraz', 'Nar', 'Kayısı', 'İncir', 'Badem', 'Kestane'];
+  S1.forEach((name, i) => { const h = (i * 7.2 + 12) % 360, s = 22 + (i % 5) * 5; add('m' + i, name, [hsl(h, s, 17), hsl(h, s, 21), hsl(h, s, 26), hsl(h, s * .9, 35), hsl(h, 22, 93), hsl(h, 14, 68), hsl(h + 6, Math.min(s + 38, 68), 66), hsl(h + 14, Math.min(s + 30, 60), 72)]); });
+  const S2 = ['Polar', 'Tundra', 'Step', 'Savan', 'Sahra', 'Kanyon', 'Mesa', 'Vadi', 'Yayla', 'Dağ Evi', 'Liman', 'Fener', 'İskele', 'Dalga', 'Mercan Kayalığı', 'Dere', 'Şelale', 'Göl', 'Nehir', 'Buğday', 'Lavanta Tarlası', 'Gül Bahçesi', 'Çay Bahçesi', 'Bağ', 'Zeytinlik', 'Fıstık', 'Ceylan', 'Geyik', 'Kurt', 'Ayı', 'Baykuş', 'Kartal', 'Yunus', 'Kaplan', 'Panter', 'Tilki', 'Karga', 'Leylek', 'Pelikan', 'Flamingo', 'Neon Gece', 'Retro', 'Synthwave', 'Terminal', 'Matrix', 'Piksel', 'Devre', 'Radar', 'Sonar', 'Kokpit'];
+  S2.forEach((name, i) => { const h = (i * 7.2 + 200) % 360, s = 14 + (i % 6) * 6, l0 = 9 + (i % 4) * 3; add('x' + i, name, [hsl(h, s, l0), hsl(h, s, l0 + 4), hsl(h, s, l0 + 9), hsl(h, s * .9, l0 + 18), hsl(h, 20, 92), hsl(h, 12, 64), hsl(h + 170 * (i % 2), Math.min(s + 45, 72), 62), hsl(h + 30 + 170 * (i % 2), Math.min(s + 35, 62), 70)]); });
   const get = () => { try { return localStorage.getItem('gbTheme') || 'ghost'; } catch (e) { return 'ghost'; } };
   function apply(id) {
     const t = T.find(x => x.id === id) || T[0], r = document.documentElement.style;

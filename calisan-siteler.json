@@ -1,0 +1,110 @@
+{
+  "guncelleme": "2026-11-22",
+  "calisan": [
+    {
+      "site": "dizipal1597.com",
+      "url": "https://dizipal1597.com/film-izle",
+      "icerik": "film",
+      "not": "Liste ve video çözümü çalışıyor; uygulama içi oynatıcıda açılıyor"
+    },
+    {
+      "site": "sezonlukdizi.cc",
+      "url": "https://sezonlukdizi.cc/diziler.asp",
+      "icerik": "dizi",
+      "not": "Bölümler ve video çözümü çalışıyor (Altyazı/Dublaj sekmeleri)"
+    },
+    {
+      "site": "hdfilmcehennemi.nl",
+      "url": "https://www.hdfilmcehennemi.nl/category/film-izle-2/",
+      "icerik": "film",
+      "not": "Liste ve video çözümü çalışıyor; kategoriler tek tek listelenir"
+    },
+    {
+      "site": "filmmakinesi.to",
+      "url": "https://filmmakinesi.to/filmler-fmuyqb/",
+      "icerik": "film",
+      "not": "Liste, sayfalama ve video çözümü çalışıyor"
+    },
+    {
+      "site": "fullhdfilmizlesene.now",
+      "url": "https://www.fullhdfilmizlesene.now/en-cok-izlenen-filmler",
+      "icerik": "film",
+      "not": "Liste ve video çözümü çalışıyor; .com adresi bu telefonda engelli"
+    },
+    {
+      "site": "selcukflix.app",
+      "url": "https://selcukflix.app/marvel-filmleri",
+      "icerik": "film/dizi",
+      "not": "Video çözümü çalışıyor ama reklam yüzünden film başına ~40 sn sürer; büyük kategoriler telefonu yavaşlatır"
+    },
+    {
+      "site": "turkcedizi.com",
+      "url": "https://turkcedizi.com/filmler",
+      "icerik": "film",
+      "not": "Video ok.ru akışı; adres süreli ve telefon IP'sine bağlı"
+    },
+    {
+      "site": "diziasia.com",
+      "url": "https://diziasia.com/diziler",
+      "icerik": "dizi",
+      "not": "Liste, bölüm ve video çalışıyor (ok.ru akışı, süreli adres)"
+    },
+    {
+      "site": "dramacix.com",
+      "url": "https://dramacix.com/diziler",
+      "icerik": "dizi",
+      "not": "Liste, bölüm ve video çalışıyor"
+    },
+    {
+      "site": "canlidizi.sbs",
+      "url": "https://canlidizi.sbs/diziler",
+      "icerik": "dizi",
+      "not": "Liste, bölüm ve video çalışıyor"
+    },
+    {
+      "site": "fulldrama.xyz",
+      "url": "https://fulldrama.xyz/series",
+      "icerik": "dizi",
+      "not": "Bölümler ve video çalışıyor; reklam yüzünden ~40 sn sürer"
+    },
+    {
+      "site": "dizi87.life",
+      "url": "https://dizi87.life/filmler",
+      "icerik": "film",
+      "not": "Liste ve video (playlist.m3u8) çalışıyor"
+    },
+    {
+      "site": "tavsiyefilmizle.net",
+      "url": "https://tavsiyefilmizle.net/kategori/aksiyon/",
+      "icerik": "film",
+      "not": "Liste ve video çözümü çalışıyor; dışarıda açılıyor (Referer'lı), benim Java testimde 404 verdi"
+    }
+  ],
+  "kismen": [
+    {
+      "site": "dizipal1827.com",
+      "url": "https://dizipal1827.com/filmler",
+      "not": "Filmler çözülüyor; diziler bölüm bazında kısmen çözülüyor"
+    },
+    {
+      "site": "filmkovasi.com",
+      "url": "https://filmkovasi.com/yeni-cikan-filmler",
+      "not": "Kategori başına yalnızca ilk 20 film geliyor"
+    },
+    {
+      "site": "dramadunyam.com",
+      "url": "https://dramadunyam.com/kisa-dizi-izle",
+      "not": "Liste ve bölümler tamam, video çözülemiyor (reklam yönlendirmesi)"
+    },
+    {
+      "site": "ybncidizi.com",
+      "url": "https://ybncidizi.com/film-izle",
+      "not": "Film listesi (630) tamam, video çözülemiyor"
+    },
+    {
+      "site": "birasyadizi.cx",
+      "url": "https://www.birasyadizi.cx/category/aile/",
+      "not": "Liste tamam, oynatıcı açılmıyor"
+    }
+  ]
+}
