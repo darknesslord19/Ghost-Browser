@@ -1438,6 +1438,7 @@ return '1'})()"""
         val DIAG_JS = """(()=>{try{const t=document.body?document.body.innerText.replace(/\s+/g,' ').slice(0,90):'';return JSON.stringify({i:[...document.querySelectorAll('iframe')].map(f=>(f.src||'').slice(0,70)).slice(0,3),pre:(document.querySelector('[data-dp-preroll]')||{getAttribute(){return ''}}).getAttribute('data-dp-preroll'),v:document.querySelectorAll('video').length,t:t})}catch(e){return ''}})()"""
 
         val CLICK_JS = """(()=>{try{
+try{window.__lc=(window.__lc||0)+1;const L=[...document.querySelectorAll('a,button,li,div,span')].filter(e=>e.children.length<3&&e.offsetParent!==null);const pk=re=>L.find(e=>{const t=(e.textContent||'').trim();return t.length<24&&re.test(t)});const lt=pk(window.__lc%2?/^(türkçe\s*)?dublaj$/i:/^(türkçe\s*)?altyaz[ıi](lı)?$/i);if(lt)lt.click()}catch(x){}
 try{const ev=()=>new CustomEvent('dp:preroll',{detail:'done'});const pe=document.querySelector('[data-dp-preroll]');if(pe&&pe.parentElement)pe.parentElement.dispatchEvent(ev());window.dispatchEvent(ev())}catch(x){}
 const sel=['.play-that-video','.play-icon','.vjs-big-play-button','.jw-icon-display','.plyr__control--overlaid','[class*=play-btn]','[class*=playBtn]','[class*=btn-play]','.play-button','#play','button[aria-label*=lay]','[data-preroll-slot]','#cstk','[data-player] button'];
 for(const s of sel){const e=document.querySelector(s);if(e&&e.offsetParent!==null){try{e.click()}catch(x){}break}}
