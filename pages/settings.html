@@ -38,7 +38,7 @@ pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; p
 
 .mback { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; z-index: 99; padding: 20px; }
 .mback.on { display: flex; }
-.mbox { background: #1e1e2b; border: 1px solid #34344d; border-radius: 22px; width: min(360px, 100%); max-height: 80vh; overflow: auto; padding: 14px; box-shadow: 0 20px 60px #000a; animation: mpop .16s ease-out; }
+.mbox { background: var(--bg2); border: 1px solid var(--line); border-radius: 22px; width: min(360px, 100%); max-height: 80vh; overflow: auto; padding: 14px; box-shadow: 0 20px 60px #000a; animation: mpop .16s ease-out; }
 @keyframes mpop { from { transform: scale(.94); opacity: 0; } }
 .mbox h3 { margin: 6px 8px 10px; font-size: 17px; }
 .mbox .mi { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px; border-radius: 14px; cursor: pointer; font-size: 16px; gap: 10px; }
@@ -76,11 +76,12 @@ button.sel::after { content: '▾'; opacity: .6; }
 .ccat .litem { margin: 6px 8px; border: 1px solid var(--line); border-radius: 12px; background: #ffffff06; overflow: hidden; }
 .lgrp .ctool { border-top: none; }
 .lgrp > .ctool:first-of-type { border-top: 1px solid var(--line); }
-#dots { display: none; position: fixed; top: 10px; right: 10px; z-index: 50; width: 42px; height: 42px; border-radius: 50%; background: #1e1e2bcc; border: 1px solid var(--line); color: var(--txt); font-size: 22px; line-height: 1; align-items: center; justify-content: center; padding: 0; backdrop-filter: blur(6px); }
+#dots { display: none; position: fixed; top: 10px; right: 10px; z-index: 50; width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--bg2) 80%, transparent); border: 1px solid var(--line); color: var(--txt); font-size: 22px; line-height: 1; align-items: center; justify-content: center; padding: 0; backdrop-filter: blur(6px); }
 .solo #dots { display: flex; }
 .solo #tmdbCard { display: none; }
 .solo main { position: relative; z-index: 3; padding-top: 60px; }
 body.solo { background: transparent !important; }
+html:has(body.solo) { background: linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--acc) 12%, var(--bg)) 100%) fixed !important; }
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; display: none; }
 .solo #fx { display: block; }
 .ctool.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; padding: 10px 12px; align-items: stretch; }
@@ -93,10 +94,10 @@ body.solo { background: transparent !important; }
 .cfail > summary::-webkit-details-marker { display: none; }
 .litem button.rt { color: #fbbf24; }
 .fchip { color: #fbbf24; font-size: 12px; margin-left: 6px; }
-body.solo .card, body.solo .lgrp { background: rgba(24, 28, 40, .62); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 6px 24px #0005; }
+body.solo .card, body.solo .lgrp { background: color-mix(in srgb, var(--bg2) 66%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 6px 24px #0005; }
 body.solo .ccat { background: rgba(255, 255, 255, .045); border-color: rgba(255, 255, 255, .08); }
 body.solo .ccat .litem { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .07); }
-body.solo #cStat { background: rgba(22, 26, 38, .78); }
+body.solo #cStat { background: color-mix(in srgb, var(--bg2) 82%, transparent); }
 body.solo input[type=text], body.solo input[type=url], body.solo input[type=password], body.solo textarea { background: rgba(255, 255, 255, .06) !important; border: 1px solid rgba(255, 255, 255, .12) !important; position: relative; z-index: 4; }
 .ctool.grid.g3 > button { font-size: 12.5px; padding: 0 6px; }
 /* ---- sol renk şeridi (durum göstergesi) ---- */
@@ -114,6 +115,23 @@ body.solo input[type=text], body.solo input[type=url], body.solo input[type=pass
 .tile2 .pv b { display: block; height: 11px; border-radius: 99px; }
 .lh img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; background: #fff; padding: 3px; }
 .lh.has { background: transparent; }
+.ccat .clb, .ccat .cic { display: none; }
+body.lay-step .lgrp { overflow: visible; counter-reset: stp; }
+body.lay-step .lgrp > summary { border-radius: 14px; }
+body.lay-step .ccat { position: relative; margin: 0 10px 18px 56px; overflow: visible; border-radius: 14px; background: linear-gradient(180deg, #ffffff0a, #ffffff04); counter-increment: stp; }
+body.lay-step .ccat::before { content: counter(stp); position: absolute; left: -46px; top: 12px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid #ffffff55; display: grid; place-items: center; background: var(--bg); font-weight: 600; font-size: 15px; z-index: 2; }
+body.lay-step .ccat::after { content: ''; position: absolute; left: -28px; top: 52px; bottom: -18px; border-left: 2px dashed #ffffff2a; }
+body.lay-step .ccat:last-of-type::after { display: none; }
+body.lay-step .ccat > summary { padding: 14px; gap: 12px; }
+body.lay-step .ccat .cic { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: #ffffff10; font-size: 21px; flex: none; }
+body.lay-step .ccat .clb { display: block; font-size: 11px; letter-spacing: .08em; font-weight: 600; color: var(--dim); }
+body.lay-step .ccat .cn { display: block; font-size: 17px; font-weight: 700; line-height: 1.25; }
+body.lay-step .ccat > summary em { font-size: 12.5px; }
+body.lay-step .ccat > summary::after { content: '›'; color: var(--dim); font-size: 22px; margin-left: 4px; }
+body.lay-step .ccat.busy { border-color: color-mix(in srgb, var(--acc) 55%, transparent); background: color-mix(in srgb, var(--acc) 12%, var(--bg)); box-shadow: 0 0 24px color-mix(in srgb, var(--acc) 22%, transparent); }
+body.lay-step .ccat.busy::before { border-color: var(--acc); box-shadow: 0 0 14px color-mix(in srgb, var(--acc) 55%, transparent); }
+body.lay-step .ccat.busy .clb { color: var(--acc); }
+body.lay-step .ccat.busy .cic { background: color-mix(in srgb, var(--acc) 20%, transparent); }
 @keyframes cspin { to { transform: rotate(360deg); } }
 .bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--acc), var(--acc2), var(--acc)); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
@@ -176,6 +194,8 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
     <div class="row"><label>Arama motoru<small>Adres çubuğuna yazılan aramalar</small></label>
       <select id="searchEngine" style="max-width:260px"><option value="https://www.google.com/search?q=%s">Google</option><option value="https://duckduckgo.com/?q=%s">DuckDuckGo</option><option value="https://www.bing.com/search?q=%s">Bing</option><option value="https://yandex.com.tr/search/?text=%s">Yandex</option></select></div>
     <div class="row"><label>Tema<small>100 renk teması · tüm arayüze uygulanır</small></label><button id="themeBtn" type="button">Tema seç</button></div>
+    <div class="row"><label>Görünüm<small>Liste ve kart yapısı</small></label><button id="layBtn" type="button">Varsayılan</button></div>
+    <div class="row"><label>İçe aktar<small>Site Tarayıcı JSON'unu geri yükle</small></label><button id="impBtn" type="button">İçe aktar</button></div>
     <div class="row"><label>Ana sayfa<small>Ev düğmesi ve yeni pencere</small></label><input id="homepage" type="text" style="max-width:260px"></div>
     <div class="row"><label>TV modu<small>Büyük arayüz + yön tuşlarıyla sanal imleç (F9 ile de açılır). Uzaktan kumanda / klavye ile kullanım için.</small></label><span class="sw"><input type="checkbox" id="tvMode"><i></i></span></div>
     <div class="row"><label>İmleç hızı<small>TV modu ve telefon touchpad'i</small></label><input id="cursorSpeed" type="number" min="0.3" max="4" step="0.1" style="max-width:100px"></div>
@@ -244,7 +264,6 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
     <div class="dim" style="margin:4px 0 8px;font-size:13px">Anahtar girersen filmlerin adı temizlenir, afiş, yıl, puan ve özet TMDB'den eklenir. Girmezsen siteden alınan afiş ve adlar kullanılır. Ücretsiz anahtar: themoviedb.org → Ayarlar → API.</div>
     <div class="row"><input id="tKey" type="password" placeholder="TMDB API anahtarı" style="flex:1"><button id="tSave">Kaydet</button></div>
     <div class="dim" style="margin-top:8px;font-size:12px">Bu ürün TMDB API'sini kullanır ancak TMDB tarafından onaylanmamış ya da sertifikalandırılmamıştır.</div></div>
-  <div class="card" style="margin-top:14px"><b>İçe aktar</b><div class="dim" style="margin:4px 0 8px;font-size:13px">Daha önce kaydettiğin JSON'u yapıştır; mevcut kayıtlara eklenir.</div><textarea id="cImp" placeholder="{ &quot;format&quot;: &quot;ghost-crawl-1&quot;, … }"></textarea><div class="row" style="margin-top:8px"><button id="cImpGo">İçe aktar</button></div></div>
 </section>
 
 <section id="history"><h2>Geçmiş</h2>
@@ -264,7 +283,7 @@ function pickModal(title, opts, cur) { return mOpen((b, close) => { if (title) {
 function confirmBox(text) { return mOpen((b, close) => { const p = document.createElement('div'); p.style.cssText = 'padding:8px;font-size:16px'; p.textContent = text; const r = document.createElement('div'); r.className = 'mb'; const n = document.createElement('button'); n.textContent = 'İptal'; n.onclick = () => close(false); const y = document.createElement('button'); y.textContent = 'Tamam'; y.className = 'primary'; y.onclick = () => close(true); r.append(n, y); b.append(p, r); }).then(v => !!v); }
 function promptBox(text, val) { return mOpen((b, close) => { const p = document.createElement('div'); p.style.cssText = 'padding:8px;font-size:16px'; p.textContent = text; const i = document.createElement('input'); i.type = 'text'; i.value = val || ''; i.onkeydown = (e) => { if (e.key === 'Enter') close(i.value); }; const r = document.createElement('div'); r.className = 'mb'; const n = document.createElement('button'); n.textContent = 'İptal'; n.onclick = () => close(null); const y = document.createElement('button'); y.textContent = 'Tamam'; y.className = 'primary'; y.onclick = () => close(i.value); r.append(n, y); b.append(p, i, r); setTimeout(() => i.focus(), 50); }); }
 
-function syncNativeTheme(t) { try { ghost.invoke('set', { theme: t.id, themeBar: t.bg2, themeAcc: t.acc }); } catch (e) {} }
+function syncNativeTheme(t) { try { ghost.invoke('set', { theme: t.id, themeBar: t.bg2, themeBg: t.bg, themeBg3: t.bg3, themeLine: t.line, themeTxt: t.txt, themeDim: t.dim, themeAcc: t.acc }); } catch (e) {} }
 function themeModal() {
   return mOpen((b, close) => {
     const h = document.createElement('h3'); h.textContent = 'Tema seç (' + GBTheme.list.length + ')'; b.append(h);
@@ -289,6 +308,22 @@ function siteIcon(el, host) {
   im.onerror = () => { i++; if (i < urls.length) im.src = urls[i]; };
   im.src = urls[0];
 }
+
+function importModal() {
+  return mOpen((b, close) => {
+    const h = document.createElement('h3'); h.textContent = 'İçe aktar'; b.append(h);
+    const d = document.createElement('div'); d.className = 'dim'; d.style.cssText = 'padding:0 8px 8px;font-size:13px'; d.textContent = 'Daha önce kaydettiğin JSON\'u yapıştır; mevcut kayıtlara eklenir.'; b.append(d);
+    const ta = document.createElement('textarea'); ta.rows = 8; ta.placeholder = '{ "format": "ghost-crawl-1", … }'; ta.style.cssText = 'width:100%;min-height:150px'; b.append(ta);
+    const r = document.createElement('div'); r.className = 'mb';
+    const n = document.createElement('button'); n.textContent = 'İptal'; n.onclick = () => close(false);
+    const y = document.createElement('button'); y.className = 'primary'; y.textContent = 'İçe aktar';
+    y.onclick = async () => { try { const c = await ghost.invoke('crawl-import', ta.value); msg(c + ' film eklendi'); cLastSig = ''; close(true); if (typeof refreshCrawler === 'function') refreshCrawler(); } catch (e) { msg(e.message); } };
+    r.append(n, y); b.append(r); setTimeout(() => ta.focus(), 60);
+  });
+}
+function layoutName() { return ld2('gbLayout', 'default') === 'step' ? 'Basamak' : 'Varsayılan'; }
+function ld2(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
+function setLayout(v) { try { localStorage.setItem('gbLayout', v); } catch (e) {} document.body.classList.toggle('lay-step', v === 'step'); const bt = document.getElementById('layBtn'); if (bt) bt.textContent = layoutName(); }
 // <select> -> özel pencere
 function enhanceSelect(sel) {
   if (sel._enh) return; sel._enh = 1; sel.style.display = 'none';
@@ -350,7 +385,7 @@ function enhanceSelect(sel) {
     }
   }
   function resize() { DPR = 1; W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); rebuild(); }
-  function apply() { const pv = cur; cur = eff(); if (document.body.classList.contains('solo')) document.documentElement.style.background = cur ? SEASONS[cur].sky : '#0e1214'; if (pv !== cur) rebuild(); }
+  function apply() { const pv = cur; cur = eff(); if (document.body.classList.contains('solo')) document.documentElement.style.background = ''; if (pv !== cur) rebuild(); }
   window.FX = { MODES, mode: () => st.mode, eco: () => st.eco, label: () => (MODES.find(m => m[0] === st.mode) || [0, ''])[1], setMode(m) { st.mode = m; sv('fxMode', m); apply(); }, setEco(v) { st.eco = !!v; sv('fxEco', v ? '1' : '0'); rebuild(); } };
   const isIn = e => e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
   addEventListener('focusin', e => { if (isIn(e)) { st.paused = true; ctx.clearRect(0, 0, W, H); } });
@@ -508,7 +543,7 @@ function renderCrawler(sum, running) {
       cBtn('Kategori ekle', async () => { const u = await promptBox('Kategori sayfasının adresi'); if (!u) return; const n = (await promptBox('Kategori adı (isteğe bağlı)')) || ''; const r = await ghost.invoke('crawl-addcat', s.host, n, u); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
       cBtn('Siteyi sil', async () => { if (await confirmBox(s.host + ' kayıtları silinsin mi?')) { await ghost.invoke('crawl-remove', s.host); cLastSig = ''; refreshCrawler(); } }, 'danger'));
     det.append(tool2);
-    s.cats.forEach(c => {
+    s.cats.forEach((c, ci) => {
       const cd = document.createElement('details'); cd.className = 'ccat'; cd.dataset.url = c.url; const key = 'c:' + s.host + c.url; cd.open = cOpen.has(key);
       const sm = document.createElement('summary');
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = cSel.has(c.url); cb.onclick = (e) => e.stopPropagation();
@@ -516,9 +551,9 @@ function renderCrawler(sum, running) {
         cb.checked ? cSel.add(c.url) : cSel.delete(c.url);
         if (cb.checked && !c.done) { const r = await ghost.invoke('crawl-list', s.host, [c.url], cPg); if (r) msg(r); else if ($('#cAuto').checked) await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); cLastSig = ''; refreshCrawler(); }
       };
-      const nm = document.createElement('span'); nm.className = 'cn'; nm.textContent = (c.group ? c.group + ' › ' : '') + c.name;
+      const nm = document.createElement('span'); nm.className = 'cn'; const clb = document.createElement('small'); clb.className = 'clb'; clb.textContent = 'KATEGORİ ' + (ci + 1); nm.append(clb, document.createTextNode((c.group ? c.group + ' › ' : '') + c.name)); const cic = document.createElement('span'); cic.className = 'cic'; cic.textContent = '🎬';
       const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.total ? ' · ' + Math.min(c.pages, c.total) + '/' + c.total + ' sayfa' : '') + (c.failed ? ' · ⚠ ' + c.failed : '') + (c.done ? ' ✓' : '') : 'taranmadı';
-      const sp = document.createElement('span'); sp.className = 'spin'; sm.append(cb, nm, sp, ct); cd.append(sm);
+      const sp = document.createElement('span'); sp.className = 'spin'; sm.append(cb, cic, nm, sp, ct); cd.append(sm);
       const prev = cCounts[s.host + c.url]; if (prev !== undefined && prev !== c.films) { ct.classList.add('pulse'); } cCounts[s.host + c.url] = c.films;
       const body = document.createElement('div'); cd.append(body);
       const fill = async () => {
@@ -570,21 +605,23 @@ function filmRow(f) {
 $('#tSave').onclick = async () => { await ghost.invoke('set', { tmdbKey: $('#tKey').value.trim() }); cKey = $('#tKey').value.trim(); msg(cKey ? 'TMDB anahtarı kaydedildi' : 'TMDB anahtarı silindi'); cLastSig = ''; refreshCrawler(); };
 $('#cFind').onclick = async () => { const u = $('#cUrl').value.trim(); if (!u) return msg('Adres yaz'); const r = await ghost.invoke('crawl-discover', u); if (r) msg(r); cLastSig = ''; refreshCrawler(); };
 $('#cStop').onclick = async () => { await ghost.invoke('crawl-stop'); refreshCrawler(); };
-$('#cImpGo').onclick = async () => { try { const n = await ghost.invoke('crawl-import', $('#cImp').value); msg(n + ' film eklendi'); $('#cImp').value = ''; cLastSig = ''; refreshCrawler(); } catch (e) { msg(e.message); } };
 $('#lq').oninput = () => loadLinks();
 $('#lClear').onclick = async () => { if (await confirmBox('Tüm video kayıtları silinsin mi?')) { await ghost.invoke('links-clear'); loadLinks(); } };
 $('#hClear').onclick = async () => { if (await confirmBox('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
 
 $('#dots').onclick = async () => {
-  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['fx', 'Süsleme: ' + FX.label()], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
+  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
   if (v === 'tmdb') {
     const k = await promptBox('TMDB API anahtarı (boş bırakırsan silinir). Anahtar girersen ad, afiş, yıl ve puan TMDB\'den gelir. Ücretsiz anahtar: themoviedb.org → Ayarlar → API', cKey);
     if (k === null) return; $('#tKey').value = k; $('#tSave').click();
   } else if (v === 'theme') { await themeModal();
+  } else if (v === 'imp') { await importModal();
+  } else if (v === 'lay') { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l);
   } else if (v === 'fx') {
     const m = await pickModal('Süsleme', FX.MODES, FX.mode()); if (m !== null) FX.setMode(m);
   } else if (v === 'eco') FX.setEco(!FX.eco());
 };
+{ const lb = document.getElementById('layBtn'); if (lb) { lb.textContent = layoutName(); lb.onclick = async () => { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l); }; } const ib = document.getElementById('impBtn'); if (ib) ib.onclick = importModal; setLayout(ld2('gbLayout', 'default')); }
 { const tb = document.getElementById('themeBtn'); if (tb) { tb.textContent = GBTheme.current().name; tb.onclick = themeModal; } }
 document.querySelectorAll('select').forEach(enhanceSelect);
 init();

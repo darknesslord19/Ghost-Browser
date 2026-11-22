@@ -263,9 +263,15 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
 
     // ================= arayüz (telefon + TV uyumlu) =================
     private var cBar = Color.parseColor("#14141D")
-    private val cPill = Color.parseColor("#25253A")
+    private var cPill = Color.parseColor("#25253A")
     private var cAcc = Color.parseColor("#8B5CF6")
-    private val cDim = Color.parseColor("#9A9AB2")
+    private var cDim = Color.parseColor("#9A9AB2")
+    private var cBg = Color.parseColor("#0B0B10")
+    private var cCard = Color.parseColor("#1E1E2B")
+    private var cLine = Color.parseColor("#34344D")
+    private var cTxt = Color.parseColor("#ECECF4")
+    private var cBg3 = Color.parseColor("#2A2A3D")
+    private lateinit var rootView: LinearLayout
 
     /** TV'de ya da TV modu açıkken arayüz büyür. */
     private fun big() = isTv || store.bool("tvMode")
@@ -273,11 +279,11 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
     private fun focusBg(radiusDp: Int = 12): StateListDrawable {
         val bg = StateListDrawable()
         val f = GradientDrawable()
-        f.setColor(Color.parseColor("#2E2E48"))
+        f.setColor(cBg3)
         f.cornerRadius = dp(radiusDp).toFloat()
         f.setStroke(dp(2), cAcc)
         val pr = GradientDrawable()
-        pr.setColor(Color.parseColor("#2A2A3D"))
+        pr.setColor(cBg3)
         pr.cornerRadius = dp(radiusDp).toFloat()
         bg.addState(intArrayOf(android.R.attr.state_focused), f)
         bg.addState(intArrayOf(android.R.attr.state_pressed), pr)
@@ -302,30 +308,42 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         return v
     }
 
+    private fun hex(k: String): Int? = try {
+        val v = store.str(k)
+        if (v.isNotEmpty()) Color.parseColor(v) else null
+    } catch (_: Exception) {
+        null
+    }
+
     private fun loadNativeTheme() {
-        try {
-            val b = store.str("themeBar")
-            val a = store.str("themeAcc")
-            if (b.isNotEmpty()) cBar = Color.parseColor(b)
-            if (a.isNotEmpty()) cAcc = Color.parseColor(a)
-        } catch (_: Exception) {
-        }
+        hex("themeBg")?.let { cBg = it }
+        hex("themeBar")?.let { cBar = it; cCard = it }
+        hex("themeBg3")?.let { cBg3 = it; cPill = it }
+        hex("themeLine")?.let { cLine = it }
+        hex("themeTxt")?.let { cTxt = it }
+        hex("themeDim")?.let { cDim = it }
+        hex("themeAcc")?.let { cAcc = it; GBTheme.acc = it }
     }
 
     private fun applyNativeTheme() {
         loadNativeTheme()
         window.statusBarColor = cBar
+        window.navigationBarColor = cBg
         bar.setBackgroundColor(cBar)
+        rootView.setBackgroundColor(cBg)
+        pill.background = pillBg(false)
         progress.progressTintList = ColorStateList.valueOf(cAcc)
+        omni.setTextColor(cTxt)
+        updateUi()
     }
 
     private fun buildUi() {
         loadNativeTheme()
         window.statusBarColor = cBar
-        window.navigationBarColor = Color.parseColor("#0B0B10")
+        window.navigationBarColor = cBg
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
-        root.setBackgroundColor(Color.parseColor("#0B0B10"))
+        root.setBackgroundColor(cBg)
 
         bar = LinearLayout(this)
         bar.orientation = LinearLayout.HORIZONTAL
@@ -387,7 +405,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         mb.setStroke(dp(1), cAcc)
         mb.cornerRadius = dp(16).toFloat()
         btnMedia.background = mb
-        btnMedia.setTextColor(Color.parseColor("#D4C4FF"))
+        btnMedia.setTextColor(cTxt)
         btnMedia.setPadding(dp(10), 0, dp(10), 0)
         btnMedia.isFocusable = true
         btnMedia.isClickable = true
@@ -423,6 +441,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         root.addView(bar, LinearLayout.LayoutParams(-1, dp(60)))
         root.addView(progress, LinearLayout.LayoutParams(-1, dp(3)))
         root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
+        rootView = root
         setContentView(root)
         applyMode()
     }
@@ -579,14 +598,14 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         val card = LinearLayout(this)
         card.orientation = LinearLayout.VERTICAL
         val bg = GradientDrawable()
-        bg.setColor(Color.parseColor("#1E1E2B"))
+        bg.setColor(cCard)
         bg.cornerRadius = dp(22).toFloat()
-        bg.setStroke(dp(1), Color.parseColor("#34344D"))
+        bg.setStroke(dp(1), cLine)
         card.background = bg
         card.setPadding(dp(22), dp(22), dp(22), dp(14))
         val tv = TextView(this)
         tv.text = message
-        tv.setTextColor(Color.parseColor("#ECECF4"))
+        tv.setTextColor(cTxt)
         tv.textSize = if (big()) 19f else 16f
         card.addView(tv, LinearLayout.LayoutParams(-1, -2))
         val row = LinearLayout(this)
@@ -602,7 +621,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             b.setTextColor(if (primary) Color.WHITE else Color.parseColor("#B8B8CC"))
             val g = GradientDrawable()
             g.cornerRadius = dp(14).toFloat()
-            if (primary) g.setColor(cAcc) else g.setColor(Color.parseColor("#2A2A3E"))
+            if (primary) g.setColor(cAcc) else g.setColor(cBg3)
             b.background = g
             b.setPadding(dp(20), dp(11), dp(20), dp(11))
             b.setOnClickListener { fn() }
@@ -631,9 +650,9 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
 
     private fun cardPopup(w: Int, content: LinearLayout): PopupWindow {
         val bg = GradientDrawable()
-        bg.setColor(Color.parseColor("#1E1E2B"))
+        bg.setColor(cCard)
         bg.cornerRadius = dp(20).toFloat()
-        bg.setStroke(dp(1), Color.parseColor("#34344D"))
+        bg.setStroke(dp(1), cLine)
         content.background = bg
         content.setPadding(dp(8), dp(10), dp(8), dp(10))
         val dm = resources.displayMetrics
@@ -680,7 +699,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             tv.text = t.title.ifEmpty { pretty(t.url) }.ifEmpty { "Yeni sekme" }
             tv.setSingleLine()
             tv.ellipsize = android.text.TextUtils.TruncateAt.END
-            tv.setTextColor(Color.parseColor("#ECECF4"))
+            tv.setTextColor(cTxt)
             tv.textSize = if (big) 18f else 15f
             tv.setPadding(dp(14), 0, dp(8), 0)
             r.addView(tv, LinearLayout.LayoutParams(0, -2, 1f))
@@ -690,7 +709,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             card.addView(r, LinearLayout.LayoutParams(-1, sz(50)))
         }
         val d = View(this)
-        d.setBackgroundColor(Color.parseColor("#2C2C42"))
+        d.setBackgroundColor(cBg3)
         val dl = LinearLayout.LayoutParams(-1, dp(1))
         dl.setMargins(dp(10), dp(6), dp(10), dp(6))
         card.addView(d, dl)
@@ -704,7 +723,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         add.addView(IconView(this, "plus"), LinearLayout.LayoutParams(sz(22), sz(22)))
         val at = TextView(this)
         at.text = "Yeni sekme"
-        at.setTextColor(Color.parseColor("#ECECF4"))
+        at.setTextColor(cTxt)
         at.textSize = if (big) 18f else 15f
         at.setPadding(dp(14), 0, 0, 0)
         add.addView(at)
@@ -755,7 +774,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             b.isFocusable = true
             b.isClickable = true
             val g = GradientDrawable()
-            g.setColor(if (fill) cAcc else Color.parseColor("#2A2A3D"))
+            g.setColor(if (fill) cAcc else cBg3)
             g.cornerRadius = dp(14).toFloat()
             b.background = g
             b.setOnFocusChangeListener { _, f -> g.setStroke(if (f) dp(2) else 0, Color.WHITE) }
@@ -827,7 +846,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             col.setPadding(dp(14), 0, 0, 0)
             val a1 = TextView(this)
             a1.text = name
-            a1.setTextColor(Color.parseColor("#ECECF4"))
+            a1.setTextColor(cTxt)
             a1.textSize = if (big) 17f else 15f
             a1.setTypeface(a1.typeface, android.graphics.Typeface.BOLD)
             val a2 = TextView(this)
@@ -859,15 +878,15 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         val card = LinearLayout(this)
         card.orientation = LinearLayout.VERTICAL
         val bg = GradientDrawable()
-        bg.setColor(Color.parseColor("#1E1E2B"))
+        bg.setColor(cCard)
         bg.cornerRadius = dp(20).toFloat()
-        bg.setStroke(dp(1), Color.parseColor("#34344D"))
+        bg.setStroke(dp(1), cLine)
         card.background = bg
         card.setPadding(dp(6), dp(8), dp(6), dp(8))
 
         fun divider() {
             val d = View(this)
-            d.setBackgroundColor(Color.parseColor("#2C2C42"))
+            d.setBackgroundColor(cBg3)
             val lp = LinearLayout.LayoutParams(-1, dp(1))
             lp.setMargins(dp(10), dp(6), dp(10), dp(6))
             card.addView(d, lp)
@@ -901,7 +920,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             r.addView(IconView(this, kind), LinearLayout.LayoutParams(sz(22), sz(22)))
             val tv = TextView(this)
             tv.text = label
-            tv.setTextColor(Color.parseColor("#ECECF4"))
+            tv.setTextColor(cTxt)
             tv.textSize = if (big) 18f else 15f
             tv.setPadding(dp(16), 0, 0, 0)
             r.addView(tv, LinearLayout.LayoutParams(0, -2, 1f))
@@ -983,7 +1002,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         s.allowContentAccess = false
         s.userAgentString = ua
         s.textZoom = if (big()) 125 else 100
-        wv.setBackgroundColor(Color.parseColor("#0B0B10"))
+        wv.setBackgroundColor(cBg)
         wv.isFocusable = true
         wv.isFocusableInTouchMode = true
 
@@ -1288,7 +1307,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                     val oldEn = store.bool("remoteEnabled")
                     val oldFl = store.str("filterListUrl")
                     store.patch(args.optJSONObject(0) ?: JSONObject())
-                    if (args.optJSONObject(0)?.has("themeBar") == true) applyNativeTheme()
+                    if (args.optJSONObject(0)?.has("themeBar") == true) runOnUiThread { applyNativeTheme() }
                     adblock.enabled = store.bool("adblock")
                     adblock.setCustom(store.arr("customBlockHosts"))
                     applyMode()

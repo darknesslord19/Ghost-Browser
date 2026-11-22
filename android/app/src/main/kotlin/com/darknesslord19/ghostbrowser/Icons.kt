@@ -144,9 +144,14 @@ class ToggleView(ctx: Context, on: Boolean) : View(ctx) {
     override fun onDraw(c: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
-        track.color = if (on) Color.parseColor("#8B5CF6") else Color.parseColor("#3A3A52")
+        track.color = if (on) GBTheme.acc else Color.parseColor("#3A3A52")
         c.drawRoundRect(RectF(0f, 0f, w, h), h / 2f, h / 2f, track)
         val r = h / 2f - 3f * resources.displayMetrics.density
         c.drawCircle(if (on) w - h / 2f else h / 2f, h / 2f, r, knob)
     }
+}
+
+/** Tema vurgu rengi (özel görünümler okur). */
+object GBTheme {
+    @JvmField var acc: Int = Color.parseColor("#8B5CF6")
 }
