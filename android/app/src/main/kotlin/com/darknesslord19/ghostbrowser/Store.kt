@@ -218,11 +218,8 @@ class Links(ctx: Context) {
         if (!src.startsWith("http")) return
         val base = if (ref.startsWith("http")) ref else src
         val host = try { android.net.Uri.parse(base).host ?: "" } catch (_: Exception) { "" }.removePrefix("www.")
-        var l = list.firstOrNull { it.optString("src") == src }
-        if (l == null) {
-            l = JSONObject().put("src", src).put("title", "").put("ref", "").put("host", host)
-            list.add(l)
-        }
+        val l: JSONObject = list.firstOrNull { it.optString("src") == src }
+            ?: JSONObject().put("src", src).put("title", "").put("ref", "").put("host", host).also { list.add(it) }
         l.put("time", System.currentTimeMillis())
         if (title.isNotEmpty()) l.put("title", title)
         if (ref.isNotEmpty()) { l.put("ref", ref); l.put("host", host) }
