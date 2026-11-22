@@ -565,6 +565,14 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                         step(80, g) { nextFilm() }
                     }
 
+                    var chal = 0
+                    lateinit var pollRef: () -> Unit
+                    fun cont() {
+                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000) evalJs(CLICK_JS, g) { tap(it) }
+                        if (waited >= 20000) return fail()
+                        step(300, g) { pollRef() }
+                    }
+
                     fun poll() {
                         if (t.media.isNotEmpty()) {
                             step(800, g) {
@@ -578,11 +586,26 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                             }
                             return
                         }
+                        if (waited % 900 == 600 && chal < 70) {
+                            evalJs("document.title", g) { ti ->
+                                if (Regex("(?i)just a moment|bir dakika|attention required|checking your browser").containsMatchIn(ti ?: "")) {
+                                    chal++
+                                    waited = 0
+                                    status = prefix() + "Doğrulama bekleniyor " + idx + "/" + todo.size
+                                    step(500, g) { poll() }
+                                } else {
+                                    waited += 300
+                                    status = prefix() + "Video çözülüyor " + idx + "/" + todo.size
+                                    cont()
+                                }
+                            }
+                            return
+                        }
                         waited += 300
-                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000) evalJs(CLICK_JS, g) { tap(it) }
-                        if (waited >= 20000) return fail()
-                        step(300, g) { poll() }
+                        cont()
                     }
+
+                    pollRef = { poll() }
                     poll()
                 }
             }
@@ -1042,7 +1065,7 @@ return '1'})()"""
 
         /** Oynat düğmesine basar, oynatıcı alanının merkez koordinatını döndürür. */
         val CLICK_JS = """(()=>{try{
-const sel=['.vjs-big-play-button','.jw-icon-display','.plyr__control--overlaid','[class*=play-btn]','[class*=playBtn]','[class*=btn-play]','.play-button','#play','button[aria-label*=lay]'];
+const sel=['.play-that-video','.play-icon','.vjs-big-play-button','.jw-icon-display','.plyr__control--overlaid','[class*=play-btn]','[class*=playBtn]','[class*=btn-play]','.play-button','#play','button[aria-label*=lay]'];
 for(const s of sel){const e=document.querySelector(s);if(e&&e.offsetParent!==null){try{e.click()}catch(x){}break}}
 document.querySelectorAll('video').forEach(v=>{try{v.muted=true;v.play()}catch(x){}});
 window.scrollTo(0,0);
