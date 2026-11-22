@@ -333,8 +333,133 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         nextFilm()
     }
 
+    // ---------------- TMDB (isteğe bağlı) ----------------
+    @Volatile var enriching = false
+        private set
+    @Volatile var enrichLeft = 0
+        private set
+    @Volatile private var enrichStop = false
+
+    private val W = "(?<![\\p{L}\\p{N}])"
+    private val E = "(?![\\p{L}\\p{N}])"
+    private val yearRe = Regex("(?<!\\d)(19|20)\\d{2}(?!\\d)")
+    private val tagRe = Regex("(?i)" + W + "(full\\s*hd|fhd|uhd|hd|4k|1080p|720p|480p|izle|türkçe|turkce|dublajlı|dublaj|altyazılı|altyazi|filmi|film|sansürsüz|tek\\s*parça|bluray|webrip|web-dl|hdrip|dual|yerli|yabancı)" + E)
+
+    /** "Robin Hood'un Ölümü 2026 Filmi 1080p Full HD izle" -> ("Robin Hood'un Ölümü", "2026") */
+    fun cleanTitle(raw: String): Pair<String, String> {
+        var s = raw
+        val year = yearRe.findAll(s).lastOrNull()?.value ?: ""
+        s = s.replace(Regex("[\\(\\[][^\\)\\]]*[\\)\\]]"), " ")
+        val noYear = yearRe.replace(s, " ")
+        var t = tagRe.replace(noYear, " ").replace(Regex("[|:–—]+"), " ").replace(Regex("\\s+-\\s+"), " ").replace(Regex("\\s+"), " ").trim()
+        if (t.isEmpty()) t = if (year.isNotEmpty()) year else raw.trim()
+        return t to year
+    }
+
+    private fun tmdbGet(url: String, key: String): String {
+        val bearer = key.length > 40
+        val u = if (bearer) url else url + (if (url.contains("?")) "&" else "?") + "api_key=" + java.net.URLEncoder.encode(key, "UTF-8")
+        val c = java.net.URL(u).openConnection() as java.net.HttpURLConnection
+        c.connectTimeout = 9000
+        c.readTimeout = 9000
+        c.setRequestProperty("Accept", "application/json")
+        if (bearer) c.setRequestProperty("Authorization", "Bearer $key")
+        try {
+            if (c.responseCode == 401) throw RuntimeException("TMDB anahtarı geçersiz")
+            if (c.responseCode !in 200..299) throw RuntimeException("TMDB HTTP " + c.responseCode)
+            return c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    private fun lookup(title: String, year: String, key: String): JSONObject? {
+        val (q, y) = cleanTitle(title).let { it.first to (if (year.isNotEmpty()) year else it.second) }
+        val res = JSONObject(tmdbGet("https://api.themoviedb.org/3/search/multi?include_adult=false&language=tr-TR&query=" + java.net.URLEncoder.encode(q, "UTF-8"), key)).optJSONArray("results") ?: return null
+        var best: JSONObject? = null
+        for (i in 0 until res.length()) {
+            val r = res.getJSONObject(i)
+            val mt = r.optString("media_type")
+            if (mt != "movie" && mt != "tv") continue
+            if (r.optString("poster_path").isEmpty() || r.optString("poster_path") == "null") continue
+            val d = r.optString("release_date").ifEmpty { r.optString("first_air_date") }
+            val ry = d.take(4)
+            if (y.isNotEmpty() && ry.isNotEmpty() && Math.abs((ry.toIntOrNull() ?: 0) - y.toInt()) <= 1) { best = r; break }
+            if (best == null) best = r
+        }
+        val r = best ?: return null
+        val d = r.optString("release_date").ifEmpty { r.optString("first_air_date") }
+        val img = "https://image.tmdb.org/t/p/"
+        return JSONObject().put("id", r.optInt("id")).put("type", r.optString("media_type"))
+            .put("title", r.optString("title").ifEmpty { r.optString("name") })
+            .put("orig", r.optString("original_title").ifEmpty { r.optString("original_name") })
+            .put("year", d.take(4))
+            .put("poster", img + "w342" + r.optString("poster_path"))
+            .put("backdrop", if (r.optString("backdrop_path").isNotEmpty() && r.optString("backdrop_path") != "null") img + "w780" + r.optString("backdrop_path") else "")
+            .put("rating", Math.round(r.optDouble("vote_average", 0.0) * 10) / 10.0)
+            .put("overview", r.optString("overview"))
+    }
+
+    /** Seçili kategorilerdeki (boşsa hepsindeki) bilgisi olmayan filmleri TMDB'den tamamlar. */
+    fun enrich(h: String, urls: JSONArray, key: String): String {
+        if (key.isBlank()) return "Önce TMDB anahtarını kaydet"
+        if (enriching) return "TMDB işlemi sürüyor"
+        val site = sites.optJSONObject(h) ?: return "Site yok"
+        val todo = ArrayList<JSONObject>()
+        val want = HashSet<String>()
+        for (i in 0 until urls.length()) want.add(urls.getString(i))
+        val ca = cats(site)
+        for (i in 0 until ca.length()) {
+            val cat = ca.getJSONObject(i)
+            if (want.isNotEmpty() && !want.contains(cat.optString("url"))) continue
+            val fl = cat.optJSONArray("films") ?: continue
+            for (k in 0 until fl.length()) {
+                val f = fl.getJSONObject(k)
+                if (!f.has("tmdb") && f.optInt("tmdbTried") != 1) todo.add(f)
+            }
+        }
+        if (todo.isEmpty()) return "Bilgi çekilecek film yok"
+        val list = todo.take(500)
+        enriching = true
+        enrichStop = false
+        enrichLeft = list.size
+        Thread {
+            var failMsg = ""
+            try {
+                for (f in list) {
+                    if (enrichStop) break
+                    var info: JSONObject? = null
+                    var ok = true
+                    try {
+                        info = lookup(f.optString("title"), "", key)
+                    } catch (e: Exception) {
+                        ok = false
+                        failMsg = e.message ?: "hata"
+                        if (failMsg.contains("anahtar")) break
+                    }
+                    main.post {
+                        if (info != null) f.put("tmdb", info) else if (ok) f.put("tmdbTried", 1)
+                        schedule()
+                    }
+                    enrichLeft--
+                    try { Thread.sleep(260) } catch (_: InterruptedException) {}
+                }
+            } finally {
+                enriching = false
+                enrichLeft = 0
+                if (failMsg.isNotEmpty()) main.post { status = "TMDB: $failMsg" }
+            }
+        }.start()
+        return ""
+    }
+
+    fun stopEnrich() {
+        enrichStop = true
+    }
+
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
+        .put("enriching", enriching).put("enrichLeft", enrichLeft)
 
     fun summary(): JSONArray {
         val out = JSONArray()
@@ -347,9 +472,14 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 val c = src.getJSONObject(i)
                 val fl = c.optJSONArray("films") ?: JSONArray()
                 var res = 0
-                for (k in 0 until fl.length()) if (fl.getJSONObject(k).optString("video").isNotEmpty()) res++
+                var info = 0
+                for (k in 0 until fl.length()) {
+                    val fo = fl.getJSONObject(k)
+                    if (fo.optString("video").isNotEmpty()) res++
+                    if (fo.has("tmdb")) info++
+                }
                 ca.put(JSONObject().put("name", c.optString("name")).put("group", c.optString("group")).put("url", c.optString("url"))
-                    .put("films", fl.length()).put("resolved", res).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")))
+                    .put("films", fl.length()).put("resolved", res).put("info", info).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")))
             }
             out.put(JSONObject().put("host", h).put("url", s.optString("url")).put("title", s.optString("title")).put("time", s.optLong("time")).put("cats", ca))
         }
@@ -378,7 +508,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 for (n in 0 until fs.length()) {
                     val f = fs.getJSONObject(n)
                     fl.put(JSONObject().put("title", f.optString("title")).put("url", f.optString("url")).put("poster", f.optString("poster"))
-                        .put("video", f.optString("video")).put("videoRef", f.optString("videoRef")))
+                        .put("video", f.optString("video")).put("videoRef", f.optString("videoRef")).also { o -> f.optJSONObject("tmdb")?.let { o.put("tmdb", it) } })
                 }
                 cs.put(JSONObject().put("name", c.optString("name")).put("group", c.optString("group")).put("url", c.optString("url")).put("films", fl))
             }
@@ -431,7 +561,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     if (fu.isEmpty()) continue
                     val ex = idx[fu]
                     if (ex == null) {
-                        fl.put(JSONObject().put("title", f.optString("title")).put("url", fu).put("poster", f.optString("poster")).put("video", f.optString("video")).put("videoRef", f.optString("videoRef")))
+                        fl.put(JSONObject().put("title", f.optString("title")).put("url", fu).put("poster", f.optString("poster")).put("video", f.optString("video")).put("videoRef", f.optString("videoRef")).also { o -> f.optJSONObject("tmdb")?.let { o.put("tmdb", it) } })
                         added++
                     } else if (ex.optString("video").isEmpty() && f.optString("video").isNotEmpty()) {
                         ex.put("video", f.optString("video")).put("videoRef", f.optString("videoRef"))

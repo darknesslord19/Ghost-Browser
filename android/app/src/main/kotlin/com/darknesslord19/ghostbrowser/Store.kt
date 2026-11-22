@@ -73,6 +73,7 @@ class Store(ctx: Context, isTv: Boolean) {
             val k = it.next()
             when (k) {
                 "searchEngine", "homepage", "filterListUrl" -> settings.put(k, p.optString(k).take(500))
+                "tmdbKey" -> settings.put(k, p.optString(k).trim().take(400))
                 "adblock", "popupBlock", "cosmetic", "tvMode", "remoteEnabled", "askPlayer" -> settings.put(k, p.optBoolean(k))
                 "remotePort" -> settings.put(k, p.optDouble(k, 8421.0).toInt().coerceIn(1024, 65000))
                 "cursorSpeed" -> settings.put(k, p.optDouble(k, 1.0).coerceIn(0.3, 4.0))

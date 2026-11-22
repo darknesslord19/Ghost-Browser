@@ -917,6 +917,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         wv.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                 assetLoader.shouldInterceptRequest(request.url)?.let { return it }
+                if (tab.isInternal && !request.isForMainFrame) imageProxy(request)?.let { return it }
                 if (tab.isPlayer) return proxyRequest(tab, request)
                 val url = request.url.toString()
                 if (!request.isForMainFrame && MEDIA_RE.containsMatchIn(url)) sniff(tab, url)
@@ -1084,6 +1085,30 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         }
     }
 
+    /** Ayarlar/yeni sekme sayfalarındaki dış afişler: hotlink korumasını aşmak için site kökünü Referer yap. */
+    private fun imageProxy(req: WebResourceRequest): WebResourceResponse? {
+        val u = req.url
+        if (u.scheme != "http" && u.scheme != "https") return null
+        if (req.method != "GET") return null
+        val accept = req.requestHeaders["Accept"] ?: ""
+        val isImg = accept.contains("image") || Regex("\\.(jpe?g|png|webp|gif|avif|svg)(\\?|#|$)", RegexOption.IGNORE_CASE).containsMatchIn(u.toString())
+        if (!isImg) return null
+        return try {
+            val c = URL(u.toString()).openConnection() as HttpURLConnection
+            c.connectTimeout = 10000
+            c.readTimeout = 15000
+            c.instanceFollowRedirects = true
+            c.setRequestProperty("User-Agent", req.requestHeaders["User-Agent"] ?: "Mozilla/5.0")
+            c.setRequestProperty("Referer", u.scheme + "://" + u.authority + "/")
+            val code = c.responseCode
+            if (code >= 400) return null
+            val mime = (c.contentType ?: "image/jpeg").substringBefore(';').trim()
+            WebResourceResponse(mime, null, code, "OK", mapOf("Access-Control-Allow-Origin" to "*"), c.inputStream)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Oynatıcı sayfasının istekleri: Referer/Origin ekle + CORS izni ver. */
     private fun proxyRequest(tab: Tab, req: WebResourceRequest): WebResourceResponse? {
         val cors = HashMap<String, String>()
@@ -1229,7 +1254,8 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-addcat" -> reply(true, crawler.addCat(args.optString(0), args.optString(1), args.optString(2)))
                 "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
                 "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
-                "crawl-stop" -> { crawler.stop(); reply(true, true) }
+                "crawl-enrich" -> reply(true, crawler.enrich(args.optString(0), args.optJSONArray(1) ?: JSONArray(), store.str("tmdbKey")))
+                "crawl-stop" -> { crawler.stop(); crawler.stopEnrich(); reply(true, true) }
                 "crawl-export" -> reply(true, crawler.export(args.optString(0)))
                 "crawl-save" -> try { reply(true, crawler.saveFile(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }
                 "crawl-import" -> try { reply(true, crawler.import(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "İçe aktarılamadı") }
