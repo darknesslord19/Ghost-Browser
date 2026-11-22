@@ -248,55 +248,108 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     private fun prefix(): String = "(${totalJobs - jobs.size}/$totalJobs) "
 
     private fun runList(j: Job, g: Int, done: () -> Unit) {
-        val cat = findCat(j.site, j.cat) ?: return done()
-        phase = "list"
-        curCat = j.cat
-        prog = 0
-        progTotal = 0
-        val films = cat.optJSONArray("films") ?: JSONArray().also { cat.put("films", it) }
+        ListRun(j, g, done).start()
+    }
+
+    /** Bir kategorinin sayfalarını gezer: kaydır -> film kartlarını çıkar -> sonraki sayfa (adres ya da tıklama). */
+    private inner class ListRun(val j: Job, val g: Int, val done: () -> Unit) {
+        var cat: JSONObject? = null
+        var films = JSONArray()
         val seen = HashSet<String>()
-        for (i in 0 until films.length()) seen.add(films.getJSONObject(i).optString("url"))
         val visited = HashSet<String>()
-        var url = if (cat.optBoolean("done") || cat.optString("next").isEmpty()) cat.optString("url") else cat.optString("next")
-        if (cat.optBoolean("done")) cat.put("pages", 0)
+        var url = ""
         var pages = 0
+        var clicks = 0
+
+        fun start() {
+            val cc = findCat(j.site, j.cat)
+            if (cc == null) {
+                done()
+                return
+            }
+            cat = cc
+            films = cc.optJSONArray("films") ?: JSONArray().also { cc.put("films", it) }
+            for (i in 0 until films.length()) seen.add(films.getJSONObject(i).optString("url"))
+            url = if (cc.optBoolean("done") || cc.optString("next").isEmpty()) cc.optString("url") else cc.optString("next")
+            if (cc.optBoolean("done")) cc.put("pages", 0)
+            phase = "list"
+            curCat = j.cat
+            prog = 0
+            progTotal = 0
+            page()
+        }
+
+        fun label(): String {
+            val cc = cat ?: return ""
+            val tp = cc.optInt("totalPages")
+            return prefix() + cc.optString("name") + " · sayfa " + (cc.optInt("pages") + 1) + (if (tp > 0) "/$tp" else "") + " · " + films.length() + " film"
+        }
 
         fun page() {
-            status = prefix() + cat.optString("name") + " · sayfa " + (cat.optInt("pages") + 1) + " · " + films.length() + " film"
+            status = label()
             prog = pages + 1
             visited.add(url)
-            load(url, g) {
-                evalJs(LIST_JS, g) { r ->
-                    var added = 0
-                    var next = ""
-                    try {
-                        val o = JSONObject(r ?: "")
-                        next = o.optString("next")
-                        val fa = o.optJSONArray("films") ?: JSONArray()
-                        for (i in 0 until fa.length()) {
-                            val f = fa.getJSONObject(i)
-                            val u = f.optString("u")
-                            if (u.isNotEmpty() && seen.add(u)) {
-                                films.put(JSONObject().put("title", f.optString("t")).put("url", u).put("poster", f.optString("p")).put("video", "").put("videoRef", ""))
-                                added++
-                            }
-                        }
-                    } catch (_: Exception) {
+            load(url, g) { extract() }
+        }
+
+        fun extract() {
+            status = label()
+            evalJs(SCROLL_JS, g) {
+                step(700, g) {
+                    evalJs(SCROLL_JS, g) {
+                        step(700, g) { evalJs(LIST_JS, g) { r -> process(r) } }
                     }
-                    pages++
-                    cat.put("pages", cat.optInt("pages") + 1)
-                    val more = next.isNotEmpty() && !visited.contains(next) && added > 0
-                    cat.put("next", if (more) next else "")
-                    cat.put("done", !more)
-                    schedule()
-                    if (more && pages < j.n) {
-                        url = next
-                        step(700, g) { page() }
-                    } else done()
                 }
             }
         }
-        page()
+
+        fun finish(complete: Boolean, next: String) {
+            val cc = cat ?: return done()
+            cc.put("next", if (complete) "" else next)
+            cc.put("done", complete)
+            schedule()
+            done()
+        }
+
+        fun process(r: String?) {
+            val cc = cat ?: return done()
+            var added = 0
+            var next = ""
+            var nc = false
+            var last = 0
+            try {
+                val o = JSONObject(r ?: "")
+                next = o.optString("next")
+                nc = o.optBoolean("nc")
+                last = o.optInt("last")
+                val fa = o.optJSONArray("films") ?: JSONArray()
+                for (i in 0 until fa.length()) {
+                    val f = fa.getJSONObject(i)
+                    val u = f.optString("u")
+                    if (u.isNotEmpty() && seen.add(u)) {
+                        films.put(JSONObject().put("title", f.optString("t")).put("url", u).put("poster", f.optString("p")).put("video", "").put("videoRef", ""))
+                        added++
+                    }
+                }
+            } catch (_: Exception) {
+            }
+            pages++
+            cc.put("pages", cc.optInt("pages") + 1)
+            if (last > cc.optInt("totalPages")) cc.put("totalPages", last)
+            schedule()
+            status = label()
+            if (next.isNotEmpty() && !visited.contains(next) && added > 0) {
+                if (pages >= j.n) return finish(false, next)
+                url = next
+                step(700, g) { page() }
+            } else if (next.isEmpty() && nc && added > 0 && clicks < 800) {
+                if (pages >= j.n) return finish(false, "")
+                clicks++
+                evalJs(CLICKNEXT_JS, g) { ok ->
+                    if (ok == "1") step(1800, g) { extract() } else finish(true, "")
+                }
+            } else finish(true, "")
+        }
     }
 
     private fun pickMedia(t: Tab): MediaItem? {
@@ -507,7 +560,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     if (fo.has("tmdb")) info++
                 }
                 ca.put(JSONObject().put("name", c.optString("name")).put("group", c.optString("group")).put("url", c.optString("url"))
-                    .put("films", fl.length()).put("resolved", res).put("info", info).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")))
+                    .put("films", fl.length()).put("resolved", res).put("info", info).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")).put("total", c.optInt("totalPages")))
             }
             out.put(JSONObject().put("host", h).put("url", s.optString("url")).put("title", s.optString("title")).put("time", s.optLong("time")).put("cats", ca))
         }
@@ -671,15 +724,33 @@ const arr=[...out.values()].sort((a,b)=>b.s-a.s).slice(0,150);
 return JSON.stringify({title:document.title,list:arr});
 }catch(e){return JSON.stringify({title:'',list:[]})}})()"""
 
-        /** Kategori sayfasındaki film kartlarını ve sonraki sayfa bağlantısını bulur. */
-        val LIST_JS = """(()=>{try{
+        const val SCROLL_JS = "(()=>{window.scrollTo(0,document.body.scrollHeight);return '1'})()"
+
+        private const val NEXT_FINDER = """
+const abs=h=>{try{const u=new URL(h,location.href);u.hash='';return u.href}catch(e){return ''}};
 const H=location.href.split('#')[0],O=location.origin;
-const abs=h=>{try{const u=new URL(h,H);u.hash='';return u.href}catch(e){return ''}};
-const shape=u=>{const p=new URL(u);const s=p.pathname.split('/').filter(Boolean);const last=s.pop()||'';return s.map(x=>/\d/.test(x)?'#':x).join('/')+'|'+s.length+'|'+(last.length>10?'L':'S')};
+const SELS=['link[rel=next]','a[rel=next]','.next a','a.next','a.nextpostslink','li.next a','a.page-numbers.next','[class*=pagination] a[class*=next]','[class*=pager] a[class*=next]','a[aria-label*=ext]','a[title*=onraki]','a[aria-label*=onraki]','.pagination .active + * a','.pagination .current + * a','li.active + li > a','li.current + li > a','span.current + a','.page-numbers.current + a','.pagination .active + a','[class*=pagination] .active + li a'];
+const okUrl=u=>u&&u!==H&&u.indexOf(O)===0;
+const findNext=()=>{
+ for(const s of SELS){let e;try{e=document.querySelector(s)}catch(x){continue}if(e){const h=e.getAttribute('href');const u=h?abs(h):'';if(okUrl(u))return{u:u,el:e}}}
+ for(const a of document.querySelectorAll('a[href]')){const t=(a.textContent||'').trim();if(t.length<16&&/^(sonraki|ileri|next|›|»|→|>)/i.test(t)){const u=abs(a.getAttribute('href'));if(okUrl(u))return{u:u,el:a}}}
+ for(const a of document.querySelectorAll('[class*=pagination] a[href],[class*=pager] a[href]')){const k=((a.className||'')+' '+(a.getAttribute('aria-label')||'')+' '+(a.title||'')+' '+((a.querySelector('i,svg,span')||{}).className||'')).toString();if(/next|right|forward|ileri|sonraki/i.test(k)){const u=abs(a.getAttribute('href'));if(okUrl(u))return{u:u,el:a}}}
+ return null};
+const ctlSels=['.next','a.next','button.next','[class*=next]:not(a[href])','[class*=load-more]','[class*=loadmore]','[class*=more-btn]','button[class*=more]','a[class*=more]'];
+const findCtl=()=>{
+ for(const s of ctlSels){let e;try{e=document.querySelector(s)}catch(x){continue}if(e&&!e.disabled&&!/disabled/.test(e.className||'')&&e.offsetParent!==null)return e}
+ for(const e of document.querySelectorAll('button,a,span,div')){if(e.children.length>2)continue;const t=(e.textContent||'').trim();if(t.length<22&&/^(daha fazla|devam|devamı|load more|more|sonraki|ileri|next|›|»|→|>)/i.test(t)&&e.offsetParent!==null&&!e.disabled)return e}
+ return null};
+"""
+
+        /** Kategori sayfasındaki film kartlarını, sonraki sayfa bağlantısını ve toplam sayfa sayısını bulur. */
+        val LIST_JS = """(()=>{try{
+""" + NEXT_FINDER + """
+const shape=u=>{const p=new URL(u);const s=p.pathname.split('/').filter(Boolean);s.pop();return s.map(x=>/\d/.test(x)?'#':x).join('/')+'|'+s.length};
 const map=new Map();
 const side='[class*=sidebar],[class*=widget],aside';
 for(const a of document.querySelectorAll('a[href]')){
- if(a.closest('header,nav,footer,[class*=menu],[class*=pagination],[class*=breadcrumb]'))continue;
+ if(a.closest('header,nav,footer,[class*=menu],[class*=pagination],[class*=pager],[class*=breadcrumb]'))continue;
  const u=abs(a.getAttribute('href')||'');if(!u||u.indexOf(O)!==0||u===H)continue;
  const img=a.querySelector('img');
  let e=map.get(u);if(!e){e={u:u,t:'',p:'',side:!!a.closest(side)};map.set(u,e)}
@@ -693,22 +764,36 @@ if(items.length<3)items=[...map.values()].filter(e=>e.t.length>3);
 const main=items.filter(e=>!e.side);if(main.length>=3)items=main;
 const cnt={};items.forEach(e=>{e.k=shape(e.u);cnt[e.k]=(cnt[e.k]||0)+1});
 const top=Math.max(0,...Object.values(cnt));
-items=items.filter(e=>cnt[e.k]>=Math.max(3,top*0.3)||items.length<4);
-const films=items.slice(0,200).map(e=>({t:e.t.replace(/\s+izle\s*${'$'}/i,'').trim(),u:e.u,p:e.p}));
-let next='';
-const rn=document.querySelector('link[rel=next],a[rel=next]');if(rn)next=abs(rn.getAttribute('href'));
-if(!next){const c=document.querySelector('.next a,a.next,a.nextpostslink,li.next a,[class*=pagination] a[class*=next],a[aria-label*=ext],a[title*=onraki]');if(c)next=abs(c.getAttribute('href'))}
-if(!next){for(const a of document.querySelectorAll('a[href]')){const t=(a.textContent||'').trim();if(t.length<16&&/^(sonraki|ileri|next|›|»|→|>)/i.test(t)){const u=abs(a.getAttribute('href'));if(u&&u!==H&&u.indexOf(O)===0){next=u;break}}}}
-if(!next){
- const sp=new URL(H);let cur=1;
- const q=sp.searchParams.get('page')||sp.searchParams.get('paged')||sp.searchParams.get('p');
- if(q&&/^\d+${'$'}/.test(q))cur=parseInt(q);
- else{const seg=sp.pathname.split('/').filter(Boolean);const l=seg[seg.length-1]||'';if(/^\d+${'$'}/.test(l))cur=parseInt(l)}
- for(const a of document.querySelectorAll('a[href]')){if((a.textContent||'').trim()===String(cur+1)){const u=abs(a.getAttribute('href'));if(u&&u!==H&&u.indexOf(O)===0){next=u;break}}}
+items=items.filter(e=>cnt[e.k]>=Math.max(2,top*0.2)||items.length<4);
+const films=items.slice(0,400).map(e=>({t:e.t.replace(/\s+izle\s*${'$'}/i,'').trim(),u:e.u,p:e.p}));
+// toplam sayfa + mevcut sayfa
+const pgSel='[class*=pagination] a,[class*=pager] a,[class*=paging] a,a.page-numbers,a[class*=page-link],nav[aria-label*=agin] a';
+let last=0;const nums=[];
+document.querySelectorAll(pgSel).forEach(a=>{const t=(a.textContent||'').trim();if(/^\d{1,4}${'$'}/.test(t)){const n=parseInt(t);last=Math.max(last,n);nums.push({n:n,h:a.getAttribute('href')||''})}});
+const sp=new URL(H);let cur=1;
+const q=sp.searchParams.get('page')||sp.searchParams.get('paged')||sp.searchParams.get('p');
+if(q&&/^\d+${'$'}/.test(q))cur=parseInt(q);
+else{const seg=sp.pathname.split('/').filter(Boolean);const l=seg[seg.length-1]||'';if(/^\d+${'$'}/.test(l))cur=parseInt(l);else{const pi=seg.indexOf('page');if(pi>=0&&/^\d+${'$'}/.test(seg[pi+1]||''))cur=parseInt(seg[pi+1])}}
+let next='';const fn=findNext();if(fn)next=fn.u;
+if(!next){for(const a of document.querySelectorAll('a[href]')){if((a.textContent||'').trim()===String(cur+1)&&a.closest('[class*=pagination],[class*=pager],[class*=paging],nav,ul')){const u=abs(a.getAttribute('href'));if(okUrl(u)){next=u;break}}}}
+if(!next&&last>cur){
+ for(const x of nums){if(!x.h||x.h[0]==='#')continue;try{const u=new URL(x.h,H);const segs=u.pathname.split('/');const i=segs.lastIndexOf(String(x.n));
+  if(i>=0){segs[i]=String(cur+1);u.pathname=segs.join('/');next=abs(u.href);break}
+  for(const k of ['page','paged','p']){if(u.searchParams.get(k)===String(x.n)){u.searchParams.set(k,String(cur+1));next=abs(u.href);break}}
+  if(next)break}catch(e){}}
 }
 if(next===H)next='';
-return JSON.stringify({films:films,next:next});
-}catch(e){return JSON.stringify({films:[],next:''})}})()"""
+let nc=false;if(!next){nc=!!findCtl()}
+return JSON.stringify({films:films,next:next,last:last,cur:cur,nc:nc});
+}catch(e){return JSON.stringify({films:[],next:'',last:0,nc:false})}})()"""
+
+        /** Adresi olmayan (ajax / sonsuz kaydırma) sonraki-sayfa denetimine tıklar. */
+        val CLICKNEXT_JS = """(()=>{try{
+""" + NEXT_FINDER + """
+const e=findCtl();if(!e)return '0';
+try{e.scrollIntoView({block:'center'})}catch(x){}
+e.click();return '1';
+}catch(e){return '0'}})()"""
 
         /** Oynat düğmesine basar, oynatıcı alanının merkez koordinatını döndürür. */
         val CLICK_JS = """(()=>{try{

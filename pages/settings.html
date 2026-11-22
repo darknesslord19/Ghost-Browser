@@ -325,7 +325,7 @@ function renderCrawler(sum, running) {
         if (cb.checked && !c.done) { const r = await ghost.invoke('crawl-list', s.host, [c.url], +pg.value); if (r) msg(r); else if ($('#cAuto').checked) await ghost.invoke('crawl-resolve', s.host, [c.url], +lim.value); cLastSig = ''; refreshCrawler(); }
       };
       const nm = document.createElement('span'); nm.className = 'cn'; nm.textContent = (c.group ? c.group + ' › ' : '') + c.name;
-      const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.done ? ' ✓' : '') : 'taranmadı';
+      const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.total ? ' · ' + Math.min(c.pages, c.total) + '/' + c.total + ' sayfa' : '') + (c.done ? ' ✓' : '') : 'taranmadı';
       const sp = document.createElement('span'); sp.className = 'spin'; sm.append(cb, nm, sp, ct); cd.append(sm);
       const prev = cCounts[s.host + c.url]; if (prev !== undefined && prev !== c.films) { ct.classList.add('pulse'); } cCounts[s.host + c.url] = c.films;
       const body = document.createElement('div'); cd.append(body);
