@@ -313,6 +313,9 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         var clicks = 0
         var initial = 0
         var wasDone = false
+        var probeStage = 0
+        var probePage = 2
+        var probeBase = ""
 
         fun start() {
             val cc = findCat(j.site, j.cat)
@@ -361,6 +364,11 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 if (arr == null) {
                     log("fetch p$p başarısız")
                     return@fetchPage finish(false, "")
+                }
+                if (arr.length() == 0 && p == 2 && !cc.has("apage")) {
+                    cc.remove("tpl")
+                    log("şablon film vermedi, tıklamaya dönüldü")
+                    return@fetchPage extract()
                 }
                 val added = addFilms(arr)
                 pages++
@@ -464,6 +472,27 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 log("başka sayfaya gidildi, durduruldu: " + (r ?: "").take(0))
                 return finish(true, "")
             }
+            if (probeStage == 1) {
+                pages++
+                cc.put("pages", cc.optInt("pages") + 1)
+                log("probe p$probePage added=$added total=" + films.length())
+                schedule()
+                if (added > 0) {
+                    if (pages >= j.n) return finish(false, "")
+                    probePage++
+                    url = probeBase + probePage
+                    step(400, g) { page() }
+                } else {
+                    probeStage = 2
+                    url = probeBase + "1"
+                    step(300, g) { page() }
+                }
+                return
+            }
+            if (probeStage == 2) {
+                log("probe p1 added=$added total=" + films.length())
+                return finish(true, "")
+            }
             pages++
             log("p$pages url=" + url.takeLast(60) + " films=" + films.length() + " added=$added next=" + next.takeLast(60) + " last=$last nc=$nc")
             cc.put("pages", cc.optInt("pages") + 1)
@@ -490,6 +519,13 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                         }
                     } else finish(true, "")
                 }
+            } else if (probeStage == 0 && pages == 1 && next.isEmpty() && !nc && added >= 5) {
+                probeStage = 1
+                probePage = 2
+                probeBase = url.substringBefore('#') + (if (url.contains('?')) "&" else "?") + "page="
+                log("sayfalama bulunamadı, ?page= deneniyor")
+                url = probeBase + "2"
+                step(500, g) { page() }
             } else finish(true, "")
         }
     }
@@ -1075,8 +1111,8 @@ const findNext=()=>{
  for(const a of document.querySelectorAll('[class*=pagination] a[href],[class*=pager] a[href]')){const k=((a.className||'')+' '+(a.getAttribute('aria-label')||'')+' '+(a.title||'')+' '+((a.querySelector('i,svg,span')||{}).className||'')).toString();if(/next|right|forward|ileri|sonraki/i.test(k)){const u=abs(a.getAttribute('href'));if(okUrl(u))return{u:u,el:a}}}
  return null};
 const SLIDER='[class*=slick],[class*=swiper],[class*=carousel],[class*=slider],[class*=owl-]';
-const ctlSels=['.next','a.next','button.next','[class*=next]:not(a[href])','[class*=load-more]','[class*=loadmore]','[class*=more-btn]','button[class*=more]','a[class*=more]','[class*=pagination] [class*=next]'];
-const visible=e=>e&&e.offsetParent!==null&&!e.disabled&&!/disabled/.test(e.className||'')&&!e.closest(SLIDER);
+const ctlSels=['button[aria-label*=onraki]','button[aria-label*=Next]','button.ldm','.next','a.next','button.next','[class*=next]:not(a[href])','[class*=load-more]','[class*=loadmore]','[class*=more-btn]','button[class*=more]','a[class*=more]','[class*=pagination] [class*=next]'];
+const visible=e=>e&&e.offsetParent!==null&&!e.disabled&&e.getAttribute('aria-disabled')!=='true'&&!/disabled/.test(e.className||'')&&!e.closest(SLIDER);
 const ctlIn=root=>{
  const gp=(window.__gpage||1)+1;
  for(const s of ctlSels){let l;try{l=root.querySelectorAll(s)}catch(x){continue}for(const e of l)if(visible(e))return e}
@@ -1122,6 +1158,7 @@ const films=items.slice(0,600).map(e=>({t:e.t.replace(/\s+izle\s*${'$'}/i,'').tr
 // toplam sayfa + mevcut sayfa
 const pgSel='[class*=pagination] a,[class*=pagination] button,[class*=pager] a,[class*=paging] a,a.page-numbers,a[class*=page-link],nav[aria-label*=agin] a';
 let last=0;const nums=[];
+document.querySelectorAll('span,div,li').forEach(e=>{if(e.children.length>3)return;const t=(e.textContent||'').trim();if(t.length>11)return;const m=t.match(/^(\d{1,3})\s*\/\s*(\d{1,4})${'$'}/);if(m){const v=parseInt(m[2]);if(v>1&&v<5000&&v>=parseInt(m[1]))last=Math.max(last,v)}});
 const dp=document.querySelector('[data-pages]');if(dp){const v=parseInt(dp.getAttribute('data-pages'));if(v>0)last=v}
 document.querySelectorAll(pgSel).forEach(a=>{const t=(a.textContent||'').trim();if(/^\d{1,4}${'$'}/.test(t)){const n=parseInt(t);last=Math.max(last,n);nums.push({n:n,h:a.getAttribute('href')||''})}});
 const sp=new URL(H);let cur=1;
