@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><title>Ayarlar</title>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ayarlar</title>
 <link rel="stylesheet" href="ghost://static/shared.css">
 <style>
 body { display: flex; height: 100vh; }
@@ -40,7 +40,20 @@ pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; p
 textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 13px; }
 .stat { display: inline-block; margin-right: 24px; } .stat b { font-size: 26px; display: block; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 #msg { position: fixed; right: 20px; bottom: 20px; background: var(--bg3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; display: none; }
-@media (max-width:720px){body{flex-direction:column}nav{width:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px;display:flex;overflow-x:auto;gap:4px;white-space:nowrap}nav h1{display:none}nav a{margin:0;padding:8px 12px}main,section{padding-left:12px;padding-right:12px}}
+@media (max-width:720px){
+  body{flex-direction:column;height:100dvh}
+  nav{width:auto;flex:none;border-right:0;border-bottom:1px solid var(--line);padding:6px 8px;display:flex;overflow-x:auto;gap:4px;white-space:nowrap;-webkit-overflow-scrolling:touch}
+  nav h1{display:none}
+  nav a{margin:0;padding:9px 13px;flex:none;border-radius:999px;font-size:14px}
+  main{padding:16px 14px 60px;min-height:0;min-width:0;flex:1}
+  main h2{font-size:20px;margin-top:4px}
+  .row{flex-wrap:wrap}
+  .row input,.row select{min-width:0}
+  .card{padding:12px}
+  .hist{flex-wrap:wrap}
+  .hist a small{display:block;margin-left:0}
+  .litem button{width:36px;height:36px}
+}
 </style></head>
 <body data-spatial>
 <nav>
