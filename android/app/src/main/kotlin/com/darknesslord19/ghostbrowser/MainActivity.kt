@@ -1271,7 +1271,7 @@ post({hello:1});
     }
 
     private fun sniff(tab: Tab, url: String, ref: String = "", master: Boolean = false, body: String = "") {
-        if (url.isEmpty() || url.contains("/video/stub.mp4")) return
+        if (url.isEmpty() || url.contains("/video/stub.mp4") || url.contains("subtitles.m3u8") || url.contains("/sub_")) return
         main.post {
             if (tab.media.any { it.url == url }) return@post
             tab.media.add(0, MediaItem(url, ref.ifEmpty { tab.url }, if (master) "HLS ★" else if (url.contains("m3u8", true) || ref.isNotEmpty() && !MEDIA_RE.containsMatchIn(url)) "HLS" else if (url.contains(".mpd", true)) "DASH" else "Video").also { it.body = body })
