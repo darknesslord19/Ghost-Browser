@@ -69,6 +69,8 @@ button.sel::after { content: '▾'; opacity: .6; }
 .litem.solving { background: linear-gradient(90deg, #8b5cf622, transparent); }
 .litem.solving::before { content: '➤'; position: absolute; left: -2px; top: 50%; transform: translateY(-50%); color: #ec4899; font-size: 14px; animation: cblink .8s ease-in-out infinite alternate; z-index: 2; }
 @keyframes cblink { from { opacity: .3; } }
+.solo nav { display: none !important; }
+.solo .tmdbhide { display: none; }
 @keyframes cspin { to { transform: rotate(360deg); } }
 .bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
@@ -231,7 +233,8 @@ function enhanceSelect(sel) {
 const $ = (s) => document.querySelector(s); let S = {}, ipIdx = 0, rinfo = null;
 const msg = (t) => { const m = $('#msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(msg._t); msg._t = setTimeout(() => m.style.display = 'none', 2600); };
 const set = (p) => ghost.invoke('set', p).then(s => { S = s; });
-function nav() { const h = (location.hash || '#genel').slice(1); document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === h)); document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + h)); if (h === 'history') loadHistory(); if (h === 'links') loadLinks(); if (h === 'crawler') loadCrawler(); if (h === 'adblock') loadAd(); if (h === 'remote') loadRemote(); if (h === 'siteler') loadSites(); }
+const SOLO = /[?&]only=crawler/.test(location.search); if (SOLO) document.body.classList.add('solo');
+function nav() { const h = SOLO ? 'crawler' : (location.hash || '#genel').slice(1); document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === h)); document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + h)); if (h === 'history') loadHistory(); if (h === 'links') loadLinks(); if (h === 'crawler') loadCrawler(); if (h === 'adblock') loadAd(); if (h === 'remote') loadRemote(); if (h === 'siteler') loadSites(); }
 window.addEventListener('hashchange', nav);
 
 async function init() {

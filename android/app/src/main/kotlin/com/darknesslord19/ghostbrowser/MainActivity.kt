@@ -221,6 +221,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         ua = WebSettings.getDefaultUserAgent(this).replace("; wv", "").replace(" Version/4.0", "")
 
         buildUi()
+        if (BuildConfig.CRAWLER_APP) bar.visibility = View.GONE
 
         remote = RemoteServer(main)
         remote.pageProvider = { assets.open("remote.html").readBytes() }
@@ -230,7 +231,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
 
         sitesJson = computeSitesJson()
         val start = intent?.data?.toString()
-        newTab(start ?: if (BuildConfig.CRAWLER_APP) "ghost://settings#crawler" else store.str("homepage"))
+        newTab(start ?: if (BuildConfig.CRAWLER_APP) "ghost://settings?only=crawler#crawler" else store.str("homepage"))
         startRemote()
         refreshSites()
         exec.execute { adblock.refreshFilter(store.str("filterListUrl"), false) }
