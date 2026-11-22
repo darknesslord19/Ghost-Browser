@@ -1151,7 +1151,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 for (k in 0 until fl.length()) {
                     val fo = fl.getJSONObject(k)
                     if (fo.optString("video").isNotEmpty()) res++
-                    else if (fo.optInt("tried") >= 2) failed++
+                    else if (fo.optInt("tried") >= 1) failed++
                     if (fo.has("tmdb")) info++
                 }
                 ca.put(JSONObject().put("name", c.optString("name")).put("group", c.optString("group")).put("url", c.optString("url"))
