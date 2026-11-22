@@ -526,7 +526,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 log("probe p1 added=$added total=" + films.length())
                 return finish(true, "")
             }
-            if (!triedStart && pages == 0 && added > 0 && added <= 40 && next.isEmpty() && !url.contains("page=")) {
+            if (!triedStart && pages == 0 && added > 0 && added <= 40 && next.isEmpty() && !nc && !url.contains("page=")) {
                 triedStart = true
                 startUrl = url
                 log("az film var ($added), ?page=1 deneniyor")
