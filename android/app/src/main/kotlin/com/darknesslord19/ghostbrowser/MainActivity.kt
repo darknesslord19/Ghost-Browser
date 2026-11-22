@@ -1260,6 +1260,10 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 if (kl == "origin" || kl == "referer" || kl == "host" || kl == "accept-encoding") continue
                 c.setRequestProperty(k, v)
             }
+            try {
+                val ck = android.webkit.CookieManager.getInstance().getCookie(req.url.toString())
+                if (!ck.isNullOrEmpty()) c.setRequestProperty("Cookie", ck)
+            } catch (_: Exception) {}
             val ref = tab.playerRef
             if (ref.isNotEmpty()) {
                 c.setRequestProperty("Referer", ref)
