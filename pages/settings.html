@@ -71,6 +71,18 @@ button.sel::after { content: '▾'; opacity: .6; }
 @keyframes cblink { from { opacity: .3; } }
 .solo nav { display: none !important; }
 .solo .tmdbhide { display: none; }
+.ccat { margin: 8px 10px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #ffffff08; }
+.ccat > summary { padding: 12px 12px; }
+.ccat .litem { margin: 6px 8px; border: 1px solid var(--line); border-radius: 12px; background: #ffffff06; overflow: hidden; }
+.lgrp .ctool { border-top: none; }
+.lgrp > .ctool:first-of-type { border-top: 1px solid var(--line); }
+#dots { display: none; position: fixed; top: 10px; right: 10px; z-index: 50; width: 42px; height: 42px; border-radius: 50%; background: #1e1e2bcc; border: 1px solid var(--line); color: var(--txt); font-size: 22px; line-height: 1; align-items: center; justify-content: center; padding: 0; backdrop-filter: blur(6px); }
+.solo #dots { display: flex; }
+.solo #tmdbCard { display: none; }
+.solo main { position: relative; z-index: 3; padding-top: 60px; }
+body.solo { background: transparent !important; }
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; display: none; }
+.solo #fx { display: block; }
 @keyframes cspin { to { transform: rotate(360deg); } }
 .bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
@@ -126,6 +138,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   <a href="#genel">⚙ Genel</a><a href="#siteler">🎞 Siteler (GitHub)</a><a href="#adblock">🛡 Reklam engelleme</a>
   <a href="#remote">📱 Telefon kumandası</a><a href="#links">🎞 Videolar</a><a href="#crawler">🕷 Site Tarayıcı</a><a href="#history">🕘 Geçmiş</a><a href="#about">ℹ Hakkında</a>
 </nav>
+<script>if(/[?&]only=crawler/.test(location.search))document.body.classList.add("solo")</script><canvas id="fx"></canvas><button id="dots" aria-label="Menü">⋮</button>
 <main>
 <section id="genel"><h2>Genel</h2>
   <div class="card">
@@ -195,7 +208,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   <div class="row"><input id="cUrl" type="url" placeholder="https://film-sitesi.com" style="flex:1"><button class="primary" id="cFind">Kategorileri bul</button></div>
   <div class="card" id="cStat" style="display:none;margin-top:10px"><div class="srow"><span class="spin" id="cSpin"></span><span id="cPct"></span><span id="cMsg"></span></div><div id="cCur"></div><div class="bar" id="cBar"><i></i></div><div class="row" style="margin-top:8px"><button id="cStop" class="danger">Durdur</button><label class="dim" style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="cAuto" style="width:18px;height:18px;accent-color:#8b5cf6"> Taramadan sonra videoları da çöz</label></div></div>
   <div id="cSites"></div>
-  <div class="card" style="margin-top:14px"><b>TMDB (isteğe bağlı)</b>
+  <div class="card" id="tmdbCard" style="margin-top:14px"><b>TMDB (isteğe bağlı)</b>
     <div class="dim" style="margin:4px 0 8px;font-size:13px">Anahtar girersen filmlerin adı temizlenir, afiş, yıl, puan ve özet TMDB'den eklenir. Girmezsen siteden alınan afiş ve adlar kullanılır. Ücretsiz anahtar: themoviedb.org → Ayarlar → API.</div>
     <div class="row"><input id="tKey" type="password" placeholder="TMDB API anahtarı" style="flex:1"><button id="tSave">Kaydet</button></div>
     <div class="dim" style="margin-top:8px;font-size:12px">Bu ürün TMDB API'sini kullanır ancak TMDB tarafından onaylanmamış ya da sertifikalandırılmamıştır.</div></div>
@@ -228,6 +241,60 @@ function enhanceSelect(sel) {
   const vd = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
   Object.defineProperty(sel, 'value', { get() { return vd.get.call(this); }, set(v) { vd.set.call(this, v); sync(); } });
 }
+</script>
+
+<script>
+(() => {
+  const SEASONS = { winter:{n:'Kış',sky:'linear-gradient(180deg,#0b1420 0%,#0e1214 60%,#101a22 100%)'}, spring:{n:'Bahar',sky:'linear-gradient(180deg,#1a1220 0%,#0e1214 60%,#1a1418 100%)'}, summer:{n:'Yaz',sky:'linear-gradient(180deg,#0a1612 0%,#0e1214 55%,#0f1c15 100%)'}, autumn:{n:'Sonbahar',sky:'linear-gradient(180deg,#1b130d 0%,#0e1214 60%,#1a120c 100%)'}, holiday:{n:'Bayram',sky:'linear-gradient(180deg,#0a0d1c 0%,#0e1214 60%,#150f1c 100%)'} };
+  const MODES = [['auto', 'Otomatik'], ['winter', 'Kış'], ['spring', 'Bahar'], ['summer', 'Yaz'], ['autumn', 'Sonbahar'], ['holiday', 'Bayram'], ['off', 'Kapalı']];
+  const ld = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+  const sv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const st = { mode: ld('fxMode', 'auto'), eco: ld('fxEco', '0') === '1', density: .55, speed: 1 };
+  const cv = document.getElementById('fx'), ctx = cv.getContext('2d');
+  let W = 0, H = 0, DPR = 1, parts = [], rockets = [], cur = null;
+  const R = (a, b) => a + Math.random() * (b - a), pick = a => a[(Math.random() * a.length) | 0];
+  function cal(d = new Date()) { const m = d.getMonth() + 1, day = d.getDate(); if ((m === 12 && day >= 24) || (m === 1 && day <= 3) || (m === 4 && day === 23)) return 'holiday'; if (m === 12 || m <= 2) return 'winter'; if (m <= 5) return 'spring'; if (m <= 8) return 'summer'; return 'autumn'; }
+  const eff = () => st.mode === 'off' ? null : st.mode === 'auto' ? cal() : st.mode;
+  const make = {
+    winter(i) { return { k: 'winter', x: R(0, W), y: i ? R(0, H) : -10, r: R(1, 3.4), vy: R(25, 60), ph: R(0, 6.28), sw: R(8, 26), flake: Math.random() < .18, a: R(.5, 1), rot: R(0, 6.28) }; },
+    spring(i) { return { k: 'spring', x: i ? R(0, W) : R(-20, W * .6), y: i ? R(0, H) : -12, s: R(5, 10), vy: R(30, 60), vx: R(15, 40), ph: R(0, 6.28), rot: R(0, 6.28), vr: R(-2, 2), c: pick(['#f6b8d0', '#f9cfe0', '#ffffff', '#f3a3c2']) }; },
+    summer(i) { return { k: 'summer', x: R(0, W), y: i ? R(0, H) : R(H * .3, H), r: R(1.6, 3.2), ph: R(0, 6.28), tw: R(1, 2.6), a: R(0, 6.28), va: R(-.8, .8), sp: R(8, 22) }; },
+    autumn(i) { return { k: 'autumn', x: R(0, W), y: i ? R(0, H) : -20, s: R(7, 13), vy: R(35, 80), ph: R(0, 6.28), sw: R(18, 46), rot: R(0, 6.28), vr: R(-2.2, 2.2), c: pick(['#e0752b', '#c9481f', '#e8a838', '#a3361b', '#d98a2b']) }; }
+  };
+  const target = () => Math.round(Math.min(160, (W * H) / 9000) * st.density * (st.eco ? .5 : 1));
+  function rebuild() { parts = []; rockets = []; if (!cur || cur === 'holiday') return; for (let i = 0, n = target(); i < n; i++) parts.push(make[cur](true)); }
+  function flake(x, y, r, rot, a) { ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 3; i++) { const g = i * Math.PI / 3; ctx.moveTo(Math.cos(g) * r * 2.4, Math.sin(g) * r * 2.4); ctx.lineTo(-Math.cos(g) * r * 2.4, -Math.sin(g) * r * 2.4); } ctx.stroke(); ctx.restore(); }
+  function petal(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.globalAlpha = .9; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * .55, 0, 0, 6.283); ctx.fill(); ctx.restore(); }
+  function leaf(p) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(1, Math.abs(Math.cos(p.ph * 1.3)) * .6 + .4); ctx.fillStyle = p.c; ctx.globalAlpha = .92; const s = p.s; ctx.beginPath(); ctx.moveTo(0, -s); ctx.quadraticCurveTo(s * .9, -s * .3, 0, s); ctx.quadraticCurveTo(-s * .9, -s * .3, 0, -s); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(0, s); ctx.stroke(); ctx.restore(); }
+  function fly(p, t) { const g = .35 + .65 * (.5 + .5 * Math.sin(t * p.tw + p.ph)), rad = p.r * 7, gr = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad); gr.addColorStop(0, `rgba(220,255,130,${.9 * g})`); gr.addColorStop(.3, `rgba(190,240,90,${.35 * g})`); gr.addColorStop(1, 'rgba(190,240,90,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, 6.283); ctx.fill(); }
+  const explode = r => { const n = 46 + ((Math.random() * 24) | 0); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + R(-.05, .05), sp = R(60, 190); parts.push({ k: 'spark', x: r.x, y: r.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, dec: R(.45, .9), h: r.hue + R(-18, 18) }); } };
+  let last = performance.now(), tAbs = 0, lt = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!document.body.classList.contains('solo')) return;
+    if (now - last < (st.eco ? 1000 / 30 : 0)) return;
+    let dt = Math.min(.05, (now - last) / 1000); last = now; tAbs += dt; ctx.clearRect(0, 0, W, H);
+    if (!cur) return; dt *= st.speed;
+    if (cur === 'holiday') {
+      lt -= dt; if (lt <= 0) { rockets.push({ x: R(W * .15, W * .85), y: H + 10, vy: -R(380, 520), hue: R(0, 360), trail: [] }); lt = R(.5, 1.3) / (.4 + st.density); }
+      for (let i = rockets.length - 1; i >= 0; i--) { const r = rockets[i]; r.y += r.vy * dt; r.vy += 190 * dt; r.trail.push([r.x, r.y]); if (r.trail.length > 9) r.trail.shift(); ctx.strokeStyle = 'rgba(255,230,170,.8)'; ctx.lineWidth = 2; ctx.beginPath(); r.trail.forEach((q, j) => j ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke(); if (r.vy > -40) { explode(r); rockets.splice(i, 1); } }
+      for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 90 * dt; p.vx *= .992; p.life -= p.dec * dt; if (p.life <= 0) { parts.splice(i, 1); continue; } ctx.fillStyle = `hsla(${p.h},95%,65%,${p.life})`; ctx.beginPath(); ctx.arc(p.x, p.y, 1.8 * p.life + .6, 0, 6.283); ctx.fill(); }
+      return;
+    }
+    const n = target(); while (parts.length < n) parts.push(make[cur](false)); if (parts.length > n + 8) parts.length = n;
+    for (const p of parts) {
+      p.ph += dt * 1.6;
+      if (p.k === 'winter') { p.y += p.vy * dt; p.x += Math.sin(p.ph) * p.sw * dt; p.rot += dt; if (p.y > H + 8) Object.assign(p, make.winter(false)); if (p.flake) flake(p.x, p.y, p.r, p.rot, p.a * .8); else { ctx.fillStyle = `rgba(255,255,255,${p.a})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); } }
+      else if (p.k === 'spring') { p.y += p.vy * dt; p.x += (p.vx + Math.sin(p.ph) * 20) * dt; p.rot += p.vr * dt; if (p.y > H + 14 || p.x > W + 14) Object.assign(p, make.spring(false)); petal(p); }
+      else if (p.k === 'autumn') { p.y += p.vy * dt; p.x += Math.sin(p.ph) * p.sw * dt; p.rot += p.vr * dt; if (p.y > H + 20) Object.assign(p, make.autumn(false)); leaf(p); }
+      else if (p.k === 'summer') { p.a += p.va * dt + Math.sin(p.ph) * .02; p.x += Math.cos(p.a) * p.sp * dt; p.y += Math.sin(p.a) * p.sp * dt * .8; if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20; if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20; fly(p, tAbs); }
+    }
+  }
+  function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); rebuild(); }
+  function apply() { const pv = cur; cur = eff(); if (document.body.classList.contains('solo')) document.documentElement.style.background = cur ? SEASONS[cur].sky : '#0e1214'; if (pv !== cur) rebuild(); }
+  window.FX = { MODES, mode: () => st.mode, eco: () => st.eco, label: () => (MODES.find(m => m[0] === st.mode) || [0, ''])[1], setMode(m) { st.mode = m; sv('fxMode', m); apply(); }, setEco(v) { st.eco = !!v; sv('fxEco', v ? '1' : '0'); rebuild(); } };
+  addEventListener('resize', resize); resize(); apply(); requestAnimationFrame(frame);
+})();
 </script>
 <script>
 const $ = (s) => document.querySelector(s); let S = {}, ipIdx = 0, rinfo = null;
@@ -434,6 +501,16 @@ $('#cImpGo').onclick = async () => { try { const n = await ghost.invoke('crawl-i
 $('#lq').oninput = () => loadLinks();
 $('#lClear').onclick = async () => { if (await confirmBox('Tüm video kayıtları silinsin mi?')) { await ghost.invoke('links-clear'); loadLinks(); } };
 $('#hClear').onclick = async () => { if (await confirmBox('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
+
+$('#dots').onclick = async () => {
+  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['fx', 'Süsleme: ' + FX.label()], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
+  if (v === 'tmdb') {
+    const k = await promptBox('TMDB API anahtarı (boş bırakırsan silinir). Anahtar girersen ad, afiş, yıl ve puan TMDB\'den gelir. Ücretsiz anahtar: themoviedb.org → Ayarlar → API', cKey);
+    if (k === null) return; $('#tKey').value = k; $('#tSave').click();
+  } else if (v === 'fx') {
+    const m = await pickModal('Süsleme', FX.MODES, FX.mode()); if (m !== null) FX.setMode(m);
+  } else if (v === 'eco') FX.setEco(!FX.eco());
+};
 document.querySelectorAll('select').forEach(enhanceSelect);
 init();
 </script></body></html>
