@@ -35,6 +35,24 @@ pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; p
 .srow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
 .spin { width: 16px; height: 16px; border: 2px solid #ffffff30; border-top-color: #ec4899; border-radius: 50%; animation: cspin .8s linear infinite; flex: none; display: none; }
 .spin.on, .busy .spin { display: inline-block; }
+
+.mback { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; z-index: 99; padding: 20px; }
+.mback.on { display: flex; }
+.mbox { background: #1e1e2b; border: 1px solid #34344d; border-radius: 22px; width: min(360px, 100%); max-height: 80vh; overflow: auto; padding: 14px; box-shadow: 0 20px 60px #000a; animation: mpop .16s ease-out; }
+@keyframes mpop { from { transform: scale(.94); opacity: 0; } }
+.mbox h3 { margin: 6px 8px 10px; font-size: 17px; }
+.mbox .mi { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px; border-radius: 14px; cursor: pointer; font-size: 16px; gap: 10px; }
+.mbox .mi:hover, .mbox .mi:focus { background: var(--bg3); outline: none; }
+.mbox .mi.on { background: linear-gradient(90deg, #8b5cf633, #ec489933); }
+.mbox .mi.on::after { content: '✓'; color: #ec4899; font-weight: 700; }
+.mbox input { width: 100%; margin: 4px 0 10px; }
+.mbox .mb { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+button.sel { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 120px; height: 38px; text-align: left; }
+button.sel::after { content: '▾'; opacity: .6; }
+.ctool.h { flex-wrap: nowrap; }
+.ctool.h button { flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px; font-size: 13px; white-space: nowrap; }
+#cPct { font-weight: 800; font-size: 18px; background: linear-gradient(90deg, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; margin-right: 8px; }
+#cCur { font-size: 13px; color: var(--dim); margin: 4px 0 8px 26px; word-break: break-word; display: none; }
 @keyframes cspin { to { transform: rotate(360deg); } }
 .bar { height: 6px; border-radius: 99px; background: var(--bg3); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6); background-size: 200% 100%; animation: cshim 1.2s linear infinite; border-radius: 99px; }
@@ -157,7 +175,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 <section id="crawler"><h2>Site Tarayıcı</h2>
   <div class="dim" style="margin-bottom:10px">Herhangi bir film sitesinin kategorilerini bulur, filmleri listeler ve video adreslerini toplar. Sonucu JSON olarak kaydedebilirsin.</div>
   <div class="row"><input id="cUrl" type="url" placeholder="https://film-sitesi.com" style="flex:1"><button class="primary" id="cFind">Kategorileri bul</button></div>
-  <div class="card" id="cStat" style="display:none;margin-top:10px"><div class="srow"><span class="spin" id="cSpin"></span><span id="cMsg"></span></div><div class="bar" id="cBar"><i></i></div><div class="row" style="margin-top:8px"><button id="cStop" class="danger">Durdur</button><label class="dim" style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="cAuto" style="width:18px;height:18px;accent-color:#8b5cf6"> Taramadan sonra videoları da çöz</label></div></div>
+  <div class="card" id="cStat" style="display:none;margin-top:10px"><div class="srow"><span class="spin" id="cSpin"></span><span id="cPct"></span><span id="cMsg"></span></div><div id="cCur"></div><div class="bar" id="cBar"><i></i></div><div class="row" style="margin-top:8px"><button id="cStop" class="danger">Durdur</button><label class="dim" style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="cAuto" style="width:18px;height:18px;accent-color:#8b5cf6"> Taramadan sonra videoları da çöz</label></div></div>
   <div id="cSites"></div>
   <div class="card" style="margin-top:14px"><b>TMDB (isteğe bağlı)</b>
     <div class="dim" style="margin:4px 0 8px;font-size:13px">Anahtar girersen filmlerin adı temizlenir, afiş, yıl, puan ve özet TMDB'den eklenir. Girmezsen siteden alınan afiş ve adlar kullanılır. Ücretsiz anahtar: themoviedb.org → Ayarlar → API.</div>
@@ -175,6 +193,24 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 </main>
 <div id="msg"></div>
 <script src="ghost://static/spatial.js"></script>
+<div class="mback" id="mback"><div class="mbox" id="mbox"></div></div>
+<script>
+const mb = () => $('#mback'), mx = () => $('#mbox');
+function mOpen(build) { return new Promise(res => { const b = mx(); b.innerHTML = ''; const close = (v) => { mb().classList.remove('on'); res(v); }; build(b, close); mb().classList.add('on'); mb().onclick = (e) => { if (e.target === mb()) close(null); }; }); }
+function pickModal(title, opts, cur) { return mOpen((b, close) => { if (title) { const h = document.createElement('h3'); h.textContent = title; b.append(h); } opts.forEach(o => { const d = document.createElement('div'); d.className = 'mi' + (String(o[0]) === String(cur) ? ' on' : ''); d.tabIndex = 0; d.textContent = o[1]; d.onclick = () => close(o[0]); d.onkeydown = (e) => { if (e.key === 'Enter') close(o[0]); }; b.append(d); }); }); }
+function confirmBox(text) { return mOpen((b, close) => { const p = document.createElement('div'); p.style.cssText = 'padding:8px;font-size:16px'; p.textContent = text; const r = document.createElement('div'); r.className = 'mb'; const n = document.createElement('button'); n.textContent = 'İptal'; n.onclick = () => close(false); const y = document.createElement('button'); y.textContent = 'Tamam'; y.className = 'primary'; y.onclick = () => close(true); r.append(n, y); b.append(p, r); }).then(v => !!v); }
+function promptBox(text, val) { return mOpen((b, close) => { const p = document.createElement('div'); p.style.cssText = 'padding:8px;font-size:16px'; p.textContent = text; const i = document.createElement('input'); i.type = 'text'; i.value = val || ''; i.onkeydown = (e) => { if (e.key === 'Enter') close(i.value); }; const r = document.createElement('div'); r.className = 'mb'; const n = document.createElement('button'); n.textContent = 'İptal'; n.onclick = () => close(null); const y = document.createElement('button'); y.textContent = 'Tamam'; y.className = 'primary'; y.onclick = () => close(i.value); r.append(n, y); b.append(p, i, r); setTimeout(() => i.focus(), 50); }); }
+// <select> -> özel pencere
+function enhanceSelect(sel) {
+  if (sel._enh) return; sel._enh = 1; sel.style.display = 'none';
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'sel'; if (sel.style.maxWidth) b.style.maxWidth = sel.style.maxWidth;
+  const sync = () => { const o = sel.options[sel.selectedIndex]; b.textContent = o ? o.textContent : ''; };
+  b.onclick = async () => { const opts = [...sel.options].map(o => [o.value, o.textContent]); const v = await pickModal(sel.closest('.row')?.querySelector('label')?.childNodes[0]?.textContent || '', opts, sel.value); if (v === null) return; sel.value = v; sync(); sel.dispatchEvent(new Event('change')); };
+  sel.after(b); sel._sync = sync; sync();
+  const vd = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  Object.defineProperty(sel, 'value', { get() { return vd.get.call(this); }, set(v) { vd.set.call(this, v); sync(); } });
+}
+</script>
 <script>
 const $ = (s) => document.querySelector(s); let S = {}, ipIdx = 0, rinfo = null;
 const msg = (t) => { const m = $('#msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(msg._t); msg._t = setTimeout(() => m.style.display = 'none', 2600); };
@@ -263,7 +299,7 @@ async function loadLinks() {
 }
 
 // ---- site tarayıcı ----
-let cPg = 200, cLim = 50, cKey = '', cCounts = {}, cSup = null, cLastSig = '', cSel = new Set(), cOpen = new Set(), cTimer = null;
+let cPg = 200, cLim = 100000, cKey = '', cCounts = {}, cSup = null, cLastSig = '', cSel = new Set(), cOpen = new Set(), cTimer = null;
 async function loadCrawler() {
   if (cSup === null) { try { await ghost.invoke('crawl-state'); cSup = true; } catch (e) { cSup = false; } }
   if (!cSup) { $('#crawler').innerHTML = '<h2>Site Tarayıcı</h2><div class="card dim">Bu özellik şimdilik yalnızca Android sürümünde çalışır.</div>'; return; }
@@ -279,8 +315,11 @@ async function refreshCrawler() {
   $('#cMsg').textContent = (st.status || '') + (st.enriching ? '  ·  TMDB: ' + st.enrichLeft + ' kaldı' : '') + (st.queue ? '  ·  sırada ' + st.queue : '');
   $('#cStop').style.display = act ? '' : 'none';
   $('#cSpin').classList.toggle('on', !!act);
-  const bar = $('#cBar'); bar.className = 'bar' + (!act ? ' idle' : st.phase === 'resolve' && st.progTotal ? ' det' : '');
-  if (st.phase === 'resolve' && st.progTotal) bar.style.setProperty('--w', Math.round(st.prog / st.progTotal * 100) + '%');
+  const bar = $('#cBar'), det = act && st.progTotal > 0 && (st.phase === 'resolve' || st.phase === 'list'); bar.className = 'bar' + (!act ? ' idle' : det ? ' det' : '');
+  const pct = det ? Math.min(100, Math.round(st.prog / st.progTotal * 100)) : 0;
+  if (det) bar.style.setProperty('--w', pct + '%');
+  $('#cPct').textContent = det ? pct + '%' : '';
+  const cur = $('#cCur'); cur.style.display = act && st.phase === 'resolve' && st.cur ? 'block' : 'none'; if (st.cur) cur.textContent = '▶ ' + st.cur;
   $('#cFind').disabled = st.running;
   document.querySelectorAll('.ccat').forEach(e => e.classList.toggle('busy', !!st.running && e.dataset.url === st.cat));
   const sum = await ghost.invoke('crawl-sites'), sig = JSON.stringify(sum);
@@ -288,7 +327,7 @@ async function refreshCrawler() {
   document.querySelectorAll('.ccat').forEach(e => e.classList.toggle('busy', !!st.running && e.dataset.url === st.cat));
 }
 function cBtn(txt, fn, cls) { const b = document.createElement('button'); b.textContent = txt; if (cls) b.className = cls; b.onclick = fn; return b; }
-function cSelect(opts, def) { const e = document.createElement('select'); opts.forEach(o => { const x = document.createElement('option'); x.value = o[0]; x.textContent = o[1]; if (String(o[0]) === String(def)) x.selected = true; e.append(x); }); return e; }
+function cSelect(opts, def, onpick) { const b = document.createElement('button'); b.type = 'button'; b.className = 'sel'; let v = def; const lab = () => { const o = opts.find(o => String(o[0]) === String(v)); b.textContent = o ? o[1] : ''; }; lab(); b.onclick = async () => { const r = await pickModal('', opts, v); if (r === null) return; v = r; lab(); onpick(Number(r)); }; return b; }
 function renderCrawler(sum, running) {
   const box = $('#cSites'); box.innerHTML = '';
   if (!sum.length) { box.innerHTML = '<div class="dim" style="padding:14px">Henüz site yok. Yukarıya bir film sitesinin adresini yazıp "Kategorileri bul"a bas.</div>'; return; }
@@ -298,8 +337,8 @@ function renderCrawler(sum, running) {
     const films = s.cats.reduce((a, c) => a + c.films, 0), vids = s.cats.reduce((a, c) => a + c.resolved, 0);
     const sum0 = document.createElement('summary'); sum0.innerHTML = '<span class="lh"></span><b></b><em></em>'; sum0.querySelector('.lh').textContent = s.host.charAt(0).toUpperCase(); sum0.querySelector('b').textContent = s.host; sum0.querySelector('em').textContent = s.cats.length + ' kategori · ' + films + ' film · ' + vids + ' video'; det.append(sum0);
     const tool = document.createElement('div'); tool.className = 'ctool';
-    const pg = cSelect([[3, '3 sayfa'], [10, '10 sayfa'], [30, '30 sayfa'], [200, 'Tüm sayfalar']], cPg); pg.onchange = () => { cPg = cPg; };
-    const lim = cSelect([[10, '10 video'], [50, '50 video'], [200, '200 video'], [100000, 'Tümü']], cLim); lim.onchange = () => { cLim = cLim; };
+    const pg = cSelect([[3, '3 sayfa'], [10, '10 sayfa'], [30, '30 sayfa'], [200, 'Tüm sayfalar']], cPg, v => { cPg = v; });
+    const lim = cSelect([[10, '10 video'], [50, '50 video'], [200, '200 video'], [100000, 'Tümü']], cLim, v => { cLim = v; });
     const picked = () => s.cats.map(c => c.url).filter(u => cSel.has(u));
     const run = async (name, a) => { const urls = picked(); if (!urls.length) return msg('Önce kategori seç'); const r = await ghost.invoke(name, s.host, urls, a); if (r) msg(r); cLastSig = ''; refreshCrawler(); };
     tool.append(pg, cBtn('Seçilenleri listele', () => run('crawl-list', cPg), 'primary'), lim, cBtn('Videoları çöz', () => run('crawl-resolve', cLim)));
@@ -313,8 +352,8 @@ function renderCrawler(sum, running) {
       cBtn('M3U8 kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked(), 'm3u8')); } catch (e) { msg(e.message); } }),
       cBtn('M3U kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked(), 'm3u')); } catch (e) { msg(e.message); } }),
       cBtn('M3U8 kopyala', async () => { try { msg(await copyText(await ghost.invoke('crawl-copy-m3u', s.host, picked())) ? 'M3U8 kopyalandı' : 'Kopyalanamadı'); } catch (e) { msg(e.message); } }),
-      cBtn('Kategori ekle', async () => { const u = prompt('Kategori sayfasının adresi'); if (!u) return; const n = prompt('Kategori adı (isteğe bağlı)') || ''; const r = await ghost.invoke('crawl-addcat', s.host, n, u); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
-      cBtn('Siteyi sil', async () => { if (confirm(s.host + ' kayıtları silinsin mi?')) { await ghost.invoke('crawl-remove', s.host); cLastSig = ''; refreshCrawler(); } }, 'danger'));
+      cBtn('Kategori ekle', async () => { const u = await promptBox('Kategori sayfasının adresi'); if (!u) return; const n = (await promptBox('Kategori adı (isteğe bağlı)')) || ''; const r = await ghost.invoke('crawl-addcat', s.host, n, u); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
+      cBtn('Siteyi sil', async () => { if (await confirmBox(s.host + ' kayıtları silinsin mi?')) { await ghost.invoke('crawl-remove', s.host); cLastSig = ''; refreshCrawler(); } }, 'danger'));
     det.append(tool2);
     s.cats.forEach(c => {
       const cd = document.createElement('details'); cd.className = 'ccat'; cd.dataset.url = c.url; const key = 'c:' + s.host + c.url; cd.open = cOpen.has(key);
@@ -331,7 +370,7 @@ function renderCrawler(sum, running) {
       const body = document.createElement('div'); cd.append(body);
       const fill = async () => {
         body.innerHTML = ''; const fl = await ghost.invoke('crawl-films', s.host, c.url); let shown = 0;
-        const bt = document.createElement('div'); bt.className = 'ctool';
+        const bt = document.createElement('div'); bt.className = 'ctool h';
         bt.append(cBtn('Bu kategoriyi tara', async () => { const r = await ghost.invoke('crawl-list', s.host, [c.url], cPg); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
           cBtn('Videoları çöz', async () => { const r = await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); if (r) msg(r); cLastSig = ''; refreshCrawler(); }, 'primary'),
           cBtn('Tanı kopyala', async () => { const t = await ghost.invoke('crawl-log', s.host, c.url); msg(await copyText(c.url + '\\n' + t) ? 'Tanı kopyalandı' : 'Kopyalanamadı'); }));
@@ -368,7 +407,8 @@ $('#cFind').onclick = async () => { const u = $('#cUrl').value.trim(); if (!u) r
 $('#cStop').onclick = async () => { await ghost.invoke('crawl-stop'); refreshCrawler(); };
 $('#cImpGo').onclick = async () => { try { const n = await ghost.invoke('crawl-import', $('#cImp').value); msg(n + ' film eklendi'); $('#cImp').value = ''; cLastSig = ''; refreshCrawler(); } catch (e) { msg(e.message); } };
 $('#lq').oninput = () => loadLinks();
-$('#lClear').onclick = async () => { if (confirm('Tüm video kayıtları silinsin mi?')) { await ghost.invoke('links-clear'); loadLinks(); } };
-$('#hClear').onclick = async () => { if (confirm('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
+$('#lClear').onclick = async () => { if (await confirmBox('Tüm video kayıtları silinsin mi?')) { await ghost.invoke('links-clear'); loadLinks(); } };
+$('#hClear').onclick = async () => { if (await confirmBox('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
+document.querySelectorAll('select').forEach(enhanceSelect);
 init();
 </script></body></html>

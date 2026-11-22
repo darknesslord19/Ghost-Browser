@@ -554,6 +554,60 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         } else updateUi()
     }
 
+    private fun cardDialog(message: String, yes: String, no: String?, onYes: () -> Unit, onNo: () -> Unit) {
+        val dlg = android.app.Dialog(this)
+        dlg.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        val bg = GradientDrawable()
+        bg.setColor(Color.parseColor("#1E1E2B"))
+        bg.cornerRadius = dp(22).toFloat()
+        bg.setStroke(dp(1), Color.parseColor("#34344D"))
+        card.background = bg
+        card.setPadding(dp(22), dp(22), dp(22), dp(14))
+        val tv = TextView(this)
+        tv.text = message
+        tv.setTextColor(Color.parseColor("#ECECF4"))
+        tv.textSize = if (big()) 19f else 16f
+        card.addView(tv, LinearLayout.LayoutParams(-1, -2))
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = Gravity.END
+        fun btn(t: String, primary: Boolean, fn: () -> Unit): TextView {
+            val b = TextView(this)
+            b.text = t
+            b.textSize = 15f
+            b.gravity = Gravity.CENTER
+            b.isFocusable = true
+            b.isClickable = true
+            b.setTextColor(if (primary) Color.WHITE else Color.parseColor("#B8B8CC"))
+            val g = GradientDrawable()
+            g.cornerRadius = dp(14).toFloat()
+            if (primary) g.setColor(cAcc) else g.setColor(Color.parseColor("#2A2A3E"))
+            b.background = g
+            b.setPadding(dp(20), dp(11), dp(20), dp(11))
+            b.setOnClickListener { fn() }
+            return b
+        }
+        var answered = false
+        if (no != null) {
+            val nb = btn(no, false) { answered = true; dlg.dismiss(); onNo() }
+            row.addView(nb)
+            (nb.layoutParams as? LinearLayout.LayoutParams)?.rightMargin = dp(8)
+            val sp = View(this)
+            row.addView(sp, LinearLayout.LayoutParams(dp(8), 1))
+        }
+        row.addView(btn(yes, true) { answered = true; dlg.dismiss(); onYes() })
+        val rl = LinearLayout.LayoutParams(-1, -2)
+        rl.topMargin = dp(18)
+        card.addView(row, rl)
+        dlg.setContentView(card)
+        dlg.setOnDismissListener { if (!answered) onNo() }
+        dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dlg.window?.setLayout(minOf(dp(360), resources.displayMetrics.widthPixels - dp(40)), android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+        dlg.show()
+    }
+
     private fun dialog() = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
 
     private fun cardPopup(w: Int, content: LinearLayout): PopupWindow {
@@ -1071,17 +1125,12 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             }
 
             override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
-                AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog_Alert).setMessage(message)
-                    .setPositiveButton("Tamam") { _, _ -> result.confirm() }
-                    .setOnCancelListener { result.cancel() }.show()
+                cardDialog(message, "Tamam", null, { result.confirm() }, { result.cancel() })
                 return true
             }
 
             override fun onJsConfirm(view: WebView, url: String, message: String, result: JsResult): Boolean {
-                AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog_Alert).setMessage(message)
-                    .setPositiveButton("Tamam") { _, _ -> result.confirm() }
-                    .setNegativeButton("İptal") { _, _ -> result.cancel() }
-                    .setOnCancelListener { result.cancel() }.show()
+                cardDialog(message, "Tamam", "İptal", { result.confirm() }, { result.cancel() })
                 return true
             }
 

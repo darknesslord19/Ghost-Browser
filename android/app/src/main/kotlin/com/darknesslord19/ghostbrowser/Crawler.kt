@@ -97,6 +97,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         jobMode = false
         phase = ""
         curCat = ""
+        curTitle = ""
         prog = 0
         progTotal = 0
         gen++
@@ -252,6 +253,9 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         b.startsWith(a)
     } catch (_: Exception) { true }
 
+    @Volatile var curTitle = ""
+        private set
+
     private fun prefix(): String = "(${totalJobs - jobs.size}/$totalJobs) "
 
     private fun runList(j: Job, g: Int, done: () -> Unit) {
@@ -282,7 +286,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             phase = "list"
             curCat = j.cat
             prog = 0
-            progTotal = 0
+            progTotal = cc.optInt("totalPages")
             if (cc.optString("tpl").isNotEmpty()) {
                 // sitenin ajax sayfalama adresi biliniyor: sayfayı bir kez aç, sonra doğrudan istek at
                 status = label()
@@ -322,7 +326,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 schedule()
                 if (added == 0) return@fetchPage finish(true, "")
                 if (pages >= j.n) return@fetchPage finish(false, "")
-                step(500, g) { fetchLoop(p + 1) }
+                step(120, g) { fetchLoop(p + 1) }
             }
         }
 
@@ -368,7 +372,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     if (enough || rounds >= maxRounds) {
                         log("scroll rounds=$rounds cards=$cnt")
                         evalJs(LIST_JS, g) { x -> process(x) }
-                    } else step(1100, g) { tick() }
+                    } else step(700, g) { tick() }
                 }
             }
             status = label()
@@ -427,7 +431,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 clicks++
                 evalJs(CLICKNEXT_JS, g) { ok ->
                     if (ok == "1") {
-                        step(1800, g) {
+                        step(1300, g) {
                             evalJs(TPL_JS, g) { t ->
                                 if (!t.isNullOrEmpty()) {
                                     cc.put("tpl", t)
@@ -486,7 +490,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             if (idx >= todo.size) return done()
             val f = todo[idx++]
             prog = idx
-            status = prefix() + "Video çözülüyor " + idx + "/" + todo.size + " · " + f.optString("title").take(40)
+            curTitle = f.optString("title")
+            status = prefix() + "Video çözülüyor " + idx + "/" + todo.size
             load(f.optString("url"), g) {
                 val t = tab
                 if (t == null) {
@@ -496,25 +501,25 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
                     fun poll() {
                         if (t.media.isNotEmpty()) {
-                            step(1500, g) {
+                            step(450, g) {
                                 val m = pickMedia(t)
                                 if (m != null) {
                                     f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis())
                                 } else f.put("tried", 1)
                                 schedule()
-                                step(700, g) { nextFilm() }
+                                step(80, g) { nextFilm() }
                             }
                             return
                         }
-                        waited += 600
-                        if (waited == 1800 || waited == 7200) evalJs(CLICK_JS, g) { tap(it) }
-                        if (waited >= 16000) {
+                        waited += 300
+                        if (waited == 1200 || waited == 5400) evalJs(CLICK_JS, g) { tap(it) }
+                        if (waited >= 13000) {
                             f.put("tried", 1)
                             schedule()
-                            step(600, g) { nextFilm() }
+                            step(80, g) { nextFilm() }
                             return
                         }
-                        step(600, g) { poll() }
+                        step(300, g) { poll() }
                     }
                     poll()
                 }
@@ -650,7 +655,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
-        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("queue", jobs.size)
+        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("cur", curTitle).put("queue", jobs.size)
 
     fun summary(): JSONArray {
         val out = JSONArray()
@@ -875,9 +880,10 @@ for(const a of document.querySelectorAll('a[href]')){
  const img=a.querySelector('img');
  let e=map.get(u);if(!e){e={u:u,t:'',p:'',side:!!a.closest(side),a:a};map.set(u,e)}
  if(img){const src=img.getAttribute('data-src')||img.getAttribute('data-lazy-src')||img.getAttribute('data-original')||img.currentSrc||img.getAttribute('src')||'';if(src&&!e.p)e.p=abs(src);const c=a.title||img.alt||'';if(c.length>e.t.length)e.t=c}
- const tx=(a.textContent||'').replace(/\s+/g,' ').trim();
- if(tx.length>e.t.length&&tx.length<140)e.t=tx;
- if(a.title&&a.title.length>e.t.length)e.t=a.title;
+ const ttl=(a.getAttribute('title')||'').replace(/\s+/g,' ').trim();
+ if(ttl){e.t=ttl;e.pin=1}
+ else if(!e.pin){const cl=a.cloneNode(true);cl.querySelectorAll('style,script,noscript,svg').forEach(x=>x.remove());const tx=(cl.textContent||'').replace(/\s+/g,' ').trim();
+ if(tx.length>e.t.length&&tx.length<140&&tx.indexOf('{')<0)e.t=tx}
 }
 let items=[...map.values()].filter(e=>e.p);
 if(items.length<3)items=[...map.values()].filter(e=>e.t.length>3);
@@ -949,7 +955,7 @@ fetch(u,{headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(r
   let p=img.getAttribute('data-src')||img.getAttribute('data-lazy-src')||img.getAttribute('data-original')||'';
   if(!p){const s=img.getAttribute('src')||'';if(s.indexOf('data:')!==0)p=s}
   if(!p){const ss=img.getAttribute('srcset')||'';const f=ss.split(',')[0].trim().split(' ')[0];if(f&&f.indexOf('data:')!==0)p=f}
-  const tt=(a.title||img.alt||a.textContent||'').replace(/\s+/g,' ').trim();
+  const cl=a.cloneNode(true);cl.querySelectorAll('style,script,noscript,svg').forEach(x=>x.remove());let tt=(a.getAttribute('title')||img.getAttribute('alt')||cl.textContent||'').replace(/\s+/g,' ').trim();if(tt.indexOf('{')>=0)tt='';
   let pu='';try{pu=p?new URL(p,location.href).href:''}catch(e){}
   out.push({t:tt,u:u2,p:pu})});
  window.__fres=JSON.stringify({films:out,ok:true})}).catch(e=>{window.__fres=JSON.stringify({films:[],ok:false})});
