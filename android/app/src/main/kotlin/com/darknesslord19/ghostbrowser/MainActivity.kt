@@ -1388,6 +1388,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-addcat" -> reply(true, crawler.addCat(args.optString(0), args.optString(1), args.optString(2)))
                 "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
                 "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
+                "crawl-fresh" -> reply(true, crawler.fresh(args.optString(0), args.optString(1), args.optString(2)) && crawler.resolve(args.optString(0), JSONArray().put(args.optString(1)), 1).isNotEmpty())
                 "crawl-github" -> reply(true, crawler.githubSync(args.optString(0)))
                 "clipboard-read" -> reply(true, try {
                     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager

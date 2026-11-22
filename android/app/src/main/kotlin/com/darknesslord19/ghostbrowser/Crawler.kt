@@ -249,6 +249,20 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         return n
     }
 
+    fun fresh(h: String, catUrl: String, url: String): Boolean {
+        val cat = findCat(h, catUrl) ?: return false
+        val fl = cat.optJSONArray("films") ?: return false
+        for (k in 0 until fl.length()) {
+            val f = fl.getJSONObject(k)
+            if (f.optString("url") == url) {
+                f.put("video", "").put("videoRef", "").put("tried", 0).put("retry", 1)
+                schedule()
+                return true
+            }
+        }
+        return false
+    }
+
     fun resolve(h: String, urls: JSONArray, limit: Int): String = queue("resolve", h, urls, limit.coerceIn(1, 100000))
 
     private fun startJobs() {
