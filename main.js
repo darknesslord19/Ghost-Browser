@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 
-const { Settings, History } = require('./lib/store');
+const { Settings, History, Links } = require('./lib/store');
 const { AdBlock, COSMETIC_CSS, hostOf } = require('./lib/adblock');
 const { fetchSource, parseSites } = require('./lib/sites');
 const { RemoteServer } = require('./lib/remote');
@@ -25,7 +25,7 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'ghost', privileges: { standard:
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 
 // ---- durum ----
-let settings, history, win, ui;
+let settings, history, links, win, ui;
 const adblock = new AdBlock();
 const remote = new RemoteServer();
 const tabs = new Map();      // id -> tab
@@ -170,7 +170,7 @@ function wireTab(tab) {
   wc.on('audio-state-changed', queueTabs);
   wc.on('did-start-navigation', (_e, url, inPlace, isMain) => { if (isMain && !inPlace) { tab.media = []; } });
   const onNav = (_e, url) => {
-    if (url.startsWith('ghost://player')) { try { tab.playerRef = new URL(url).searchParams.get('ref') || ''; } catch { tab.playerRef = ''; } }
+    if (url.startsWith('ghost://player')) { try { const sp = new URL(url).searchParams; tab.playerRef = sp.get('ref') || ''; if (sp.get('src')) links.add(sp.get('src'), sp.get('title') || '', tab.playerRef); } catch { tab.playerRef = ''; } }
     if (url.startsWith('ghost://newtab') || url.startsWith('ghost://settings')) tab.title = url.startsWith('ghost://newtab') ? 'Yeni sekme' : 'Ayarlar';
     history.add(url, wc.getTitle()); queueTabs();
   };
@@ -599,6 +599,9 @@ function setupIpc() {
   });
   G('local-remove', (url) => { const list = settings.get().localSites.filter(x => x.url !== url); settings.set({ localSites: list }); sendGhostPages('sites-updated'); remote.pushSoon(); return { local: list }; });
   G('history', (q, limit) => history.recent(Math.min(+limit || 100, 500), String(q || '')));
+  G('links', () => links.list());
+  G('links-remove', (u) => { links.remove(String(u)); return true; });
+  G('links-clear', () => { links.clear(); return true; });
   G('history-clear', () => { history.clear(); return true; });
   G('history-remove', (u) => { history.remove(u); return true; });
   G('open', (url, o) => { const t = active(); if (o?.newTab || !t) createTab(url); else navigate(t, url); });
@@ -631,6 +634,7 @@ app.whenReady().then(async () => {
   const dir = app.getPath('userData');
   settings = new Settings(path.join(dir, 'settings.json'));
   history = new History(path.join(dir, 'history.json'));
+  links = new Links(path.join(dir, 'links.json'));
   try { defaultSites = parseSites(JSON.parse(fs.readFileSync(path.join(__dirname, 'sites.default.json'), 'utf8'))).sites; } catch { defaultSites = []; }
   loadSitesCache();
   adblock.enabled = settings.get().adblock; adblock.setCustom(settings.get().customBlockHosts);

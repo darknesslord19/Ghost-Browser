@@ -184,3 +184,68 @@ class History(ctx: Context) {
         save()
     }
 }
+
+class Links(ctx: Context) {
+    private val file = File(ctx.filesDir, "links.json")
+    private val list = ArrayList<JSONObject>()
+    private val handler = Handler(Looper.getMainLooper())
+    private val saver = Runnable { save() }
+
+    init {
+        try {
+            val a = JSONArray(file.readText())
+            for (i in 0 until a.length()) list.add(a.getJSONObject(i))
+        } catch (_: Exception) {
+        }
+    }
+
+    @Synchronized
+    private fun save() {
+        try {
+            val a = JSONArray()
+            for (o in list) a.put(o)
+            file.writeText(a.toString())
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun schedule() {
+        handler.removeCallbacks(saver)
+        handler.postDelayed(saver, 800)
+    }
+
+    fun add(src: String, title: String, ref: String) {
+        if (!src.startsWith("http")) return
+        val base = if (ref.startsWith("http")) ref else src
+        val host = try { android.net.Uri.parse(base).host ?: "" } catch (_: Exception) { "" }.removePrefix("www.")
+        var l = list.firstOrNull { it.optString("src") == src }
+        if (l == null) {
+            l = JSONObject().put("src", src).put("title", "").put("ref", "").put("host", host)
+            list.add(l)
+        }
+        l.put("time", System.currentTimeMillis())
+        if (title.isNotEmpty()) l.put("title", title)
+        if (ref.isNotEmpty()) { l.put("ref", ref); l.put("host", host) }
+        if (list.size > 1000) {
+            list.sortByDescending { it.optLong("time") }
+            while (list.size > 800) list.removeAt(list.size - 1)
+        }
+        schedule()
+    }
+
+    fun all(): JSONArray {
+        val out = JSONArray()
+        list.sortedByDescending { it.optLong("time") }.forEach { out.put(it) }
+        return out
+    }
+
+    fun remove(src: String) {
+        list.removeAll { it.optString("src") == src }
+        schedule()
+    }
+
+    fun clear() {
+        list.clear()
+        save()
+    }
+}

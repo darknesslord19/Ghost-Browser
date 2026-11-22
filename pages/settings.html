@@ -23,6 +23,16 @@ h2 { margin: 0 0 18px; } h3 { margin: 26px 0 8px; font-size: 15px; }
 .src:last-child { border: 0; } .src .u { flex: 1; min-width: 0; word-break: break-all; font-size: 13px; }
 .ok { color: var(--ok); } .err { color: var(--bad); }
 pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow: auto; font-size: 12.5px; user-select: text; }
+.lgrp { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; margin: 10px 0; overflow: hidden; }
+.lgrp summary { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none; }
+.lgrp summary::-webkit-details-marker { display: none; }
+.lgrp summary b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lgrp summary em { color: var(--dim); font-style: normal; font-size: 13px; }
+.lh { width: 34px; height: 34px; border-radius: 10px; background: var(--grad); display: grid; place-items: center; font-weight: 800; flex: none; }
+.litem { display: flex; gap: 6px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); }
+.litem .lt { flex: 1; min-width: 0; } .litem .ln { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.litem small { color: var(--dim); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.litem button { width: 38px; height: 38px; padding: 0; border-radius: 10px; flex: none; }
 .hist { display: flex; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); align-items: center; }
 .hist a { flex: 1; min-width: 0; text-decoration: none; color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist a small { color: var(--dim); margin-left: 8px; } .hist time { color: var(--dim); font-size: 12px; flex: none; }
@@ -36,7 +46,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 <nav>
   <h1>👻 <span>Ayarlar</span></h1>
   <a href="#genel">⚙ Genel</a><a href="#siteler">🎞 Siteler (GitHub)</a><a href="#adblock">🛡 Reklam engelleme</a>
-  <a href="#remote">📱 Telefon kumandası</a><a href="#history">🕘 Geçmiş</a><a href="#about">ℹ Hakkında</a>
+  <a href="#remote">📱 Telefon kumandası</a><a href="#links">🎞 Videolar</a><a href="#history">🕘 Geçmiş</a><a href="#about">ℹ Hakkında</a>
 </nav>
 <main>
 <section id="genel"><h2>Genel</h2>
@@ -96,6 +106,12 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
       <div class="dim" style="font-size:13px">Windows güvenlik duvarı sorarsa <b>Özel ağlara izin ver</b> de.</div></div></div>
 </section>
 
+<section id="links"><h2>Videolar</h2>
+  <div class="dim" style="margin-bottom:10px">Oynatıcıda açtığın videolar, site site gruplanır. Bağlantıyı kopyala, yeniden oynat ya da siteyi aç.</div>
+  <div class="row"><input id="lq" type="search" placeholder="Videolarda ara…" style="flex:1"><button class="danger" id="lClear">Tümünü sil</button></div>
+  <div id="lList"></div>
+</section>
+
 <section id="history"><h2>Geçmiş</h2>
   <div class="row"><input id="hq" type="search" placeholder="Geçmişte ara…" style="flex:1"><button class="danger" id="hClear">Tümünü sil</button></div>
   <div id="hList"></div>
@@ -109,7 +125,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 const $ = (s) => document.querySelector(s); let S = {}, ipIdx = 0, rinfo = null;
 const msg = (t) => { const m = $('#msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(msg._t); msg._t = setTimeout(() => m.style.display = 'none', 2600); };
 const set = (p) => ghost.invoke('set', p).then(s => { S = s; });
-function nav() { const h = (location.hash || '#genel').slice(1); document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === h)); document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + h)); if (h === 'history') loadHistory(); if (h === 'adblock') loadAd(); if (h === 'remote') loadRemote(); if (h === 'siteler') loadSites(); }
+function nav() { const h = (location.hash || '#genel').slice(1); document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === h)); document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + h)); if (h === 'history') loadHistory(); if (h === 'links') loadLinks(); if (h === 'adblock') loadAd(); if (h === 'remote') loadRemote(); if (h === 'siteler') loadSites(); }
 window.addEventListener('hashchange', nav);
 
 async function init() {
@@ -166,6 +182,33 @@ async function loadHistory() {
   list.forEach(h => { const d = document.createElement('div'); d.className = 'hist'; const a = document.createElement('a'); a.href = h.url; a.textContent = h.title || h.url; const sm = document.createElement('small'); sm.textContent = h.url.replace(/^https?:\/\//, '').slice(0, 70); a.append(sm); const t = document.createElement('time'); t.textContent = new Date(h.time).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); const x = document.createElement('button'); x.textContent = '✕'; x.onclick = async () => { await ghost.invoke('history-remove', h.url); loadHistory(); }; d.append(a, t, x); box.append(d); });
 }
 $('#hq').oninput = () => loadHistory();
+// ---- videolar (siteye göre gruplu) ----
+const copyText = async (t) => { try { await navigator.clipboard.writeText(t); return true; } catch (e) {} try { const a = document.createElement('textarea'); a.value = t; a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select(); const ok = document.execCommand('copy'); a.remove(); return ok; } catch (e) { return false; } };
+async function loadLinks() {
+  const q = ($('#lq').value || '').toLowerCase(), box = $('#lList'); box.innerHTML = '';
+  const all = (await ghost.invoke('links')).filter(l => !q || (l.title || '').toLowerCase().includes(q) || (l.host || '').includes(q) || l.src.toLowerCase().includes(q));
+  if (!all.length) { box.innerHTML = '<div class="dim" style="padding:14px">Henüz video yok. Bir filmi Ghost Oynatıcı\'da açınca burada listelenir.</div>'; return; }
+  const groups = new Map(); all.forEach(l => { const k = l.host || 'Diğer'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
+  groups.forEach((items, host) => {
+    const det = document.createElement('details'); det.open = !q && groups.size <= 3 || !!q; det.className = 'lgrp';
+    const sum = document.createElement('summary'); sum.innerHTML = '<span class="lh"></span><b></b><em></em>'; sum.querySelector('.lh').textContent = host.charAt(0).toUpperCase(); sum.querySelector('b').textContent = host; sum.querySelector('em').textContent = items.length + ' video'; det.append(sum);
+    items.forEach(l => {
+      const d = document.createElement('div'); d.className = 'litem';
+      const t = document.createElement('div'); t.className = 'lt'; const n = document.createElement('div'); n.className = 'ln'; n.textContent = l.title || l.src; const sm = document.createElement('small'); sm.textContent = l.src.replace(/^https?:\/\//, '').slice(0, 80) + ' · ' + new Date(l.time).toLocaleDateString('tr-TR'); t.append(n, sm);
+      const mk = (txt, title, fn, cls) => { const b = document.createElement('button'); b.textContent = txt; b.title = title; if (cls) b.className = cls; b.onclick = fn; return b; };
+      const play = () => ghost.invoke('open', 'ghost://player?src=' + encodeURIComponent(l.src) + (l.title ? '&title=' + encodeURIComponent(l.title) : '') + (l.ref ? '&ref=' + encodeURIComponent(l.ref) : ''), { newTab: true });
+      d.append(t,
+        mk('▶', 'Oynat', play),
+        mk('⧉', 'Video bağlantısını kopyala', async (e) => { const ok = await copyText(l.src); msg(ok ? 'Bağlantı kopyalandı' : 'Kopyalanamadı'); }),
+        ...(l.ref ? [mk('↗', 'Siteyi aç', () => ghost.invoke('open', l.ref, { newTab: true }))] : []),
+        mk('✕', 'Sil', async () => { await ghost.invoke('links-remove', l.src); loadLinks(); }, 'danger'));
+      det.append(d);
+    });
+    box.append(det);
+  });
+}
+$('#lq').oninput = () => loadLinks();
+$('#lClear').onclick = async () => { if (confirm('Tüm video kayıtları silinsin mi?')) { await ghost.invoke('links-clear'); loadLinks(); } };
 $('#hClear').onclick = async () => { if (confirm('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
 init();
 </script></body></html>

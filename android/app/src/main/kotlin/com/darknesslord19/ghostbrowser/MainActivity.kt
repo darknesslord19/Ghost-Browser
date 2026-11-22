@@ -83,6 +83,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
 
     private lateinit var store: Store
     private lateinit var history: History
+    private lateinit var links: Links
     private lateinit var adblock: AdBlock
     private lateinit var remote: RemoteServer
     private lateinit var assetLoader: WebViewAssetLoader
@@ -130,6 +131,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         isTv = um.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
         store = Store(this, isTv)
         history = History(this)
+        links = Links(this)
         adblock = AdBlock(this)
         adblock.enabled = store.bool("adblock")
         adblock.setCustom(store.arr("customBlockHosts"))
@@ -851,6 +853,12 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
             override fun onPageFinished(view: WebView, url: String) {
                 tab.loading = false
                 tab.title = view.title ?: ""
+                if (url.startsWith(ASSET + "player")) {
+                    try {
+                        val q = Uri.parse(url)
+                        q.getQueryParameter("src")?.let { links.add(it, q.getQueryParameter("title") ?: "", q.getQueryParameter("ref") ?: "") }
+                    } catch (_: Exception) {}
+                }
                 if (tab === cur) progress.visibility = View.GONE
                 if (!url.startsWith(ASSET) && url.startsWith("http")) {
                     history.add(url, view.title)
@@ -1111,6 +1119,9 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                     reply(true, JSONObject().put("local", n))
                 }
                 "history" -> reply(true, history.recent(minOf(args.optInt(1, 100), 500), args.optString(0)))
+                "links" -> reply(true, links.all())
+                "links-remove" -> { links.remove(args.optString(0)); reply(true, true) }
+                "links-clear" -> { links.clear(); reply(true, true) }
                 "history-clear" -> { history.clear(); reply(true, true) }
                 "history-remove" -> { history.remove(args.optString(0)); reply(true, true) }
                 "open" -> {
