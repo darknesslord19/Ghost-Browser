@@ -455,6 +455,10 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 val hr = o.optString("href")
                 if (hr.isNotEmpty() && !samePath(cc.optString("url"), hr)) offSite = true
                 next = o.optString("next")
+                if (next.isNotEmpty() && !plausibleNext(url, next)) {
+                    log("geçersiz sonraki bağlantı yok sayıldı: " + next.takeLast(50))
+                    next = ""
+                }
                 nc = o.optBoolean("nc")
                 last = o.optInt("last")
                 val fa = if (offSite) JSONArray() else (o.optJSONArray("films") ?: JSONArray())
@@ -553,6 +557,16 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     private fun pickMedia(t: Tab): MediaItem? {
         val ok = t.media.filter { !(it.url.contains("aud", true) && it.url.contains("sublist", true)) }
         return ok.firstOrNull { it.kind == "HLS ★" } ?: ok.firstOrNull() ?: t.media.firstOrNull()
+    }
+
+    /** Sonraki sayfa adayı aynı listenin sayfası mı? (aynı yol, alt yol ya da rakamları farklı aynı yol) */
+    private fun plausibleNext(cur: String, nxt: String): Boolean = try {
+        val pa = URI(cur.substringBefore('#')).path.trimEnd('/')
+        val pb = URI(nxt.substringBefore('#')).path.trimEnd('/')
+        val norm = { s: String -> s.replace(Regex("\\d+"), "#") }
+        pa == pb || pb.startsWith("$pa/") || norm(pa) == norm(pb)
+    } catch (_: Exception) {
+        false
     }
 
     private fun isSeries(u: String): Boolean = Regex("^https?://[^/]+/(series|dizi|diziler|show|tv-series)/", RegexOption.IGNORE_CASE).containsMatchIn(u)
