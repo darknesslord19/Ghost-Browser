@@ -736,7 +736,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     fun cont() {
                         if (waited >= 1500 && ensureTab().lockUrl.isEmpty()) ensureTab().lockUrl = ensureTab().url.substringBefore("#")
                         if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000 || waited == 20000 || waited == 27000 || waited == 34000 || waited == 41000) evalJs(CLICK_JS, g) { tap(it) }
-                        if (waited == 4500 || waited == 9000 || waited == 14000 || waited == 18000) evalJs("((/reklam|advert|skip ad/i.test((document.body?document.body.innerText:'').slice(0,800))||[...document.querySelectorAll('video')].some(v=>!v.paused||v.readyState>0)||[...document.querySelectorAll('iframe')].some(f=>/iframe\\.php/.test(f.src||'')))?'1':'0')", g) { a -> if ((a ?: "").contains("1")) adBusy = true }
+                        if (waited == 4500 || waited == 9000 || waited == 14000 || waited == 18000) evalJs("((/reklam|advert|skip ad/i.test((document.body?document.body.innerText:'').slice(0,800))||document.querySelectorAll('video').length>0||[...document.querySelectorAll('iframe')].some(f=>/iframe\\.php/.test(f.src||'')))?'1':'0')", g) { a -> if ((a ?: "").contains("1")) adBusy = true }
                         if (waited >= (if (adBusy) 45000 else 20000)) return fail()
                         step(300, g) { pollRef() }
                     }
@@ -1427,6 +1427,8 @@ const re2=/\/[a-z0-9_\-\/.%]*?(\d{1,2})-sezon[\/-](\d{1,3})-bolum[a-z0-9_\-.]*/g
 while((m=re2.exec(h))){const p=m[0].split('#')[0].split('?')[0];if(slug&&p.toLowerCase().indexOf('/'+slug+'/')<0&&p.toLowerCase().indexOf('/'+slug+'-'+parseInt(m[1])+'-sezon')<0)continue;add(p,parseInt(m[1]),parseInt(m[2]))}
 const re3=/\/[a-z0-9_\-\/.%]*?\/(?:bolum|episode|ep)-(\d{1,4})(?=["'\\?\s<#&])/gi;
 while((m=re3.exec(h))){const p=m[0];if(slug&&p.toLowerCase().indexOf('/'+slug+'/')<0)continue;add(p,1,parseInt(m[1]))}
+const re4=/\/izle\/[a-z0-9_\-.%]+\?s=(\d{1,2})(?:&amp;|&)e=(\d{1,4})/gi;
+while((m=re4.exec(h))){if(slug&&m[0].toLowerCase().indexOf(slug)<0)continue;add(m[0].replace(/&amp;/g,'&'),parseInt(m[1]),parseInt(m[2]))}
 out.sort((a,b)=>a.s-b.s||a.e-b.e);
 return JSON.stringify(out)}catch(e){return '[]'}})()"""
 
