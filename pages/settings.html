@@ -33,7 +33,7 @@ pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; p
 .litem .lt { flex: 1; min-width: 0; } .litem .ln { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .litem small { color: var(--dim); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .srow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
-.spin { width: 16px; height: 16px; border: 2px solid #ffffff30; border-top-color: var(--acc2); border-radius: 50%; animation: cspin .8s linear infinite; flex: none; display: none; }
+.spin { width: 16px; height: 16px; border: 2px solid rgba(var(--ovr),0.19); border-top-color: var(--acc2); border-radius: 50%; animation: cspin .8s linear infinite; flex: none; display: none; }
 .spin.on, .busy .spin { display: inline-block; }
 
 .mback { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; z-index: 99; padding: 20px; }
@@ -62,7 +62,7 @@ button.sel::after { content: '▾'; opacity: .6; }
 .litem { position: relative; }
 .litem:not(.ok) img.poster { filter: grayscale(.8) brightness(.55); transition: filter .6s; }
 .litem.ok img.poster { filter: none; }
-.litem .fb { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #ffffff14; display: none; overflow: hidden; }
+.litem .fb { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(var(--ovr),0.08); display: none; overflow: hidden; }
 .litem.solving .fb { display: block; }
 .litem .fb i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--acc), var(--acc2)); animation: fbar 13s linear forwards; }
 @keyframes fbar { to { width: 100%; } }
@@ -71,9 +71,9 @@ button.sel::after { content: '▾'; opacity: .6; }
 @keyframes cblink { from { opacity: .3; } }
 .solo nav { display: none !important; }
 .solo .tmdbhide { display: none; }
-.ccat { margin: 8px 10px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #ffffff08; }
+.ccat { margin: 8px 10px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: rgba(var(--ovr),0.03); }
 .ccat > summary { padding: 12px 12px; }
-.ccat .litem { margin: 6px 8px; border: 1px solid var(--line); border-radius: 12px; background: #ffffff06; overflow: hidden; }
+.ccat .litem { margin: 6px 8px; border: 1px solid var(--line); border-radius: 12px; background: rgba(var(--ovr),0.02); overflow: hidden; }
 .lgrp .ctool { border-top: none; }
 .lgrp > .ctool:first-of-type { border-top: 1px solid var(--line); }
 #dots { display: none; position: fixed; top: 10px; right: 10px; z-index: 50; width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--bg2) 80%, transparent); border: 1px solid var(--line); color: var(--txt); font-size: 22px; line-height: 1; align-items: center; justify-content: center; padding: 0; backdrop-filter: blur(6px); }
@@ -81,7 +81,7 @@ button.sel::after { content: '▾'; opacity: .6; }
 .solo #tmdbCard { display: none; }
 .solo main { position: relative; z-index: 3; padding-top: 60px; }
 body.solo { background: transparent !important; }
-html:has(body.solo) { background: linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--acc) 12%, var(--bg)) 100%) fixed !important; }
+html:has(body.solo) { background: var(--bgimg, linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--acc) 12%, var(--bg)) 100%)) fixed !important; }
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; display: none; }
 .solo #fx { display: block; }
 .ctool.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; padding: 10px 12px; align-items: stretch; }
@@ -94,15 +94,15 @@ html:has(body.solo) { background: linear-gradient(180deg, var(--bg) 0%, color-mi
 .cfail > summary::-webkit-details-marker { display: none; }
 .litem button.rt { color: #fbbf24; }
 .fchip { color: #fbbf24; font-size: 12px; margin-left: 6px; }
-body.solo .card, body.solo .lgrp { background: color-mix(in srgb, var(--bg2) 66%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 6px 24px #0005; }
-body.solo .ccat { background: rgba(255, 255, 255, .045); border-color: rgba(255, 255, 255, .08); }
-body.solo .ccat .litem { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .07); }
+body.solo .card, body.solo .lgrp { background: color-mix(in srgb, var(--bg2) 66%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(var(--ovr),.09); box-shadow: 0 6px 24px #0005; }
+body.solo .ccat { background: rgba(var(--ovr),.045); border-color: rgba(var(--ovr),.08); }
+body.solo .ccat .litem { background: rgba(var(--ovr),.04); border-color: rgba(var(--ovr),.07); }
 body.solo #cStat { background: color-mix(in srgb, var(--bg2) 82%, transparent); }
-body.solo input[type=text], body.solo input[type=url], body.solo input[type=password], body.solo textarea { background: rgba(255, 255, 255, .06) !important; border: 1px solid rgba(255, 255, 255, .12) !important; position: relative; z-index: 4; }
+body.solo input[type=text], body.solo input[type=url], body.solo input[type=password], body.solo textarea { background: rgba(var(--ovr),.06) !important; border: 1px solid rgba(var(--ovr),.12) !important; position: relative; z-index: 4; }
 .ctool.grid.g3 > button { font-size: 12.5px; padding: 0 6px; }
 /* ---- sol renk şeridi (durum göstergesi) ---- */
 .litem { padding-left: 22px !important; }
-.litem::before, .litem.solving::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; transform: none; font-size: 0; border-radius: 12px 0 0 12px; background: linear-gradient(180deg, #ffffff30, #ffffff12); box-shadow: inset -1px 0 0 #00000030; animation: none; opacity: 1; z-index: 2; }
+.litem::before, .litem.solving::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; transform: none; font-size: 0; border-radius: 12px 0 0 12px; background: linear-gradient(180deg, rgba(var(--ovr),0.19), rgba(var(--ovr),0.07)); box-shadow: inset -1px 0 0 #00000030; animation: none; opacity: 1; z-index: 2; }
 .litem.ok::before { background: linear-gradient(180deg, #4ade80, #16a34a); box-shadow: 0 0 12px #22c55e66, inset -1px 0 0 #00000030; }
 .litem.fail::before { background: linear-gradient(180deg, #fbbf24, #f97316); box-shadow: 0 0 12px #f59e0b55, inset -1px 0 0 #00000030; }
 .litem.solving::before { background: linear-gradient(180deg, var(--acc), var(--acc2), var(--acc)); background-size: 100% 300%; box-shadow: 0 0 16px color-mix(in srgb, var(--acc2) 53%, transparent); animation: tabflow 1.1s linear infinite; }
@@ -110,7 +110,7 @@ body.solo input[type=text], body.solo input[type=url], body.solo input[type=pass
 .tgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 58vh; overflow-y: auto; padding: 2px; }
 .tile2 { border: 1px solid var(--line); border-radius: 14px; padding: 8px; cursor: pointer; text-align: center; font-size: 11.5px; color: var(--dim); background: transparent; }
 .tile2.on { outline: 2px solid var(--acc); color: var(--txt); }
-.tile2 .pv { border-radius: 9px; padding: 7px; height: 66px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 6px; border: 1px solid #ffffff14; }
+.tile2 .pv { border-radius: 9px; padding: 7px; height: 66px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 6px; border: 1px solid rgba(var(--ovr),0.08); }
 .tile2 .pv i { display: block; height: 5px; border-radius: 4px; }
 .tile2 .pv b { display: block; height: 11px; border-radius: 99px; }
 .lh img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; background: #fff; padding: 3px; }
@@ -118,12 +118,12 @@ body.solo input[type=text], body.solo input[type=url], body.solo input[type=pass
 .ccat .clb, .ccat .cic { display: none; }
 body.lay-step .lgrp { overflow: visible; counter-reset: stp; }
 body.lay-step .lgrp > summary { border-radius: 14px; }
-body.lay-step .ccat { position: relative; margin: 0 10px 18px 56px; overflow: visible; border-radius: 14px; background: linear-gradient(180deg, #ffffff0a, #ffffff04); counter-increment: stp; }
-body.lay-step .ccat::before { content: counter(stp); position: absolute; left: -46px; top: 12px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid #ffffff55; display: grid; place-items: center; background: var(--bg); font-weight: 600; font-size: 15px; z-index: 2; }
-body.lay-step .ccat::after { content: ''; position: absolute; left: -28px; top: 52px; bottom: -18px; border-left: 2px dashed #ffffff2a; }
+body.lay-step .ccat { position: relative; margin: 0 10px 18px 56px; overflow: visible; border-radius: 14px; background: linear-gradient(180deg, rgba(var(--ovr),0.04), rgba(var(--ovr),0.02)); counter-increment: stp; }
+body.lay-step .ccat::before { content: counter(stp); position: absolute; left: -46px; top: 12px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(var(--ovr),0.33); display: grid; place-items: center; background: var(--bg); font-weight: 600; font-size: 15px; z-index: 2; }
+body.lay-step .ccat::after { content: ''; position: absolute; left: -28px; top: 52px; bottom: -18px; border-left: 2px dashed rgba(var(--ovr),0.16); }
 body.lay-step .ccat:last-of-type::after { display: none; }
 body.lay-step .ccat > summary { padding: 14px; gap: 12px; }
-body.lay-step .ccat .cic { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: #ffffff10; font-size: 21px; flex: none; }
+body.lay-step .ccat .cic { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: rgba(var(--ovr),0.06); font-size: 21px; flex: none; }
 body.lay-step .ccat .clb { display: block; font-size: 11px; letter-spacing: .08em; font-weight: 600; color: var(--dim); }
 body.lay-step .ccat .cn { display: block; font-size: 17px; font-weight: 700; line-height: 1.25; }
 body.lay-step .ccat > summary em { font-size: 12.5px; }
@@ -195,6 +195,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
       <select id="searchEngine" style="max-width:260px"><option value="https://www.google.com/search?q=%s">Google</option><option value="https://duckduckgo.com/?q=%s">DuckDuckGo</option><option value="https://www.bing.com/search?q=%s">Bing</option><option value="https://yandex.com.tr/search/?text=%s">Yandex</option></select></div>
     <div class="row"><label>Tema<small>100 renk teması · tüm arayüze uygulanır</small></label><button id="themeBtn" type="button">Tema seç</button></div>
     <div class="row"><label>Görünüm<small>Liste ve kart yapısı</small></label><button id="layBtn" type="button">Varsayılan</button></div>
+    <div class="row"><label>GitHub aktarımı<small>JSON / M3U / M3U8 dosyalarını depoya yükle</small></label><button id="ghBtn" type="button">Ayarla</button></div>
     <div class="row"><label>İçe aktar<small>Site Tarayıcı JSON'unu geri yükle</small></label><button id="impBtn" type="button">İçe aktar</button></div>
     <div class="row"><label>Ana sayfa<small>Ev düğmesi ve yeni pencere</small></label><input id="homepage" type="text" style="max-width:260px"></div>
     <div class="row"><label>TV modu<small>Büyük arayüz + yön tuşlarıyla sanal imleç (F9 ile de açılır). Uzaktan kumanda / klavye ile kullanım için.</small></label><span class="sw"><input type="checkbox" id="tvMode"><i></i></span></div>
@@ -324,6 +325,23 @@ function importModal() {
 function layoutName() { return ld2('gbLayout', 'default') === 'step' ? 'Basamak' : 'Varsayılan'; }
 function ld2(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
 function setLayout(v) { try { localStorage.setItem('gbLayout', v); } catch (e) {} document.body.classList.toggle('lay-step', v === 'step'); const bt = document.getElementById('layBtn'); if (bt) bt.textContent = layoutName(); }
+
+async function githubModal() {
+  let cfg = {}; try { cfg = await ghost.invoke('settings'); } catch (e) {}
+  return mOpen((b, close) => {
+    const h = document.createElement('h3'); h.textContent = 'GitHub aktarımı'; b.append(h);
+    const d = document.createElement('div'); d.className = 'dim'; d.style.cssText = 'padding:0 8px 8px;font-size:12.5px'; d.textContent = 'JSON, M3U8 ve M3U dosyaları bu depoya yüklenir. Token en az "repo" (contents: write) yetkisi olmalı. Token yalnızca bu cihazda saklanır.'; b.append(d);
+    const f = (ph, val, type) => { const i = document.createElement('input'); i.type = type || 'text'; i.placeholder = ph; i.value = val || ''; i.style.margin = '4px 0'; b.append(i); return i; };
+    const repo = f('Depo: kullanici/depo-adi', cfg.githubRepo), path = f('Klasör (varsayılan ghost-tarayici)', cfg.githubPath), br = f('Dal (boşsa varsayılan dal)', cfg.githubBranch), tok = f('Token: ghp_…', cfg.githubToken, 'password');
+    const lb = document.createElement('label'); lb.style.cssText = 'display:flex;gap:8px;align-items:center;margin:10px 4px;font-size:14px'; const ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = !!cfg.githubAuto; ck.style.cssText = 'width:20px;height:20px;accent-color:var(--acc)'; lb.append(ck, document.createTextNode('Tarama/çözme bitince otomatik güncelle')); b.append(lb);
+    const save = async () => { await ghost.invoke('set', { githubRepo: repo.value, githubPath: path.value, githubBranch: br.value, githubToken: tok.value, githubAuto: ck.checked }); };
+    const r = document.createElement('div'); r.className = 'mb';
+    const n = document.createElement('button'); n.textContent = 'Kapat'; n.onclick = async () => { await save(); close(false); };
+    const y = document.createElement('button'); y.className = 'primary'; y.textContent = 'Kaydet ve şimdi yükle';
+    y.onclick = async () => { await save(); try { msg(await ghost.invoke('crawl-github', '')); } catch (e) { msg(e.message); } close(true); if (typeof refreshCrawler === 'function') refreshCrawler(); };
+    r.append(n, y); b.append(r);
+  });
+}
 // <select> -> özel pencere
 function enhanceSelect(sel) {
   if (sel._enh) return; sel._enh = 1; sel.style.display = 'none';
@@ -494,8 +512,8 @@ async function refreshCrawler() {
   const st = await ghost.invoke('crawl-state');
   $('#cStat').style.display = st.running || st.status ? 'block' : 'none';
   const act = st.running || st.enriching;
-  $('#cStat').style.display = act || st.status ? 'block' : 'none';
-  $('#cMsg').textContent = (st.status || '') + (st.enriching ? '  ·  TMDB: ' + st.enrichLeft + ' kaldı' : '') + (st.queue ? '  ·  sırada ' + st.queue : '');
+  $('#cStat').style.display = act || st.status || st.gh ? 'block' : 'none';
+  $('#cMsg').textContent = (st.status || '') + (st.gh ? '  ·  ' + st.gh : '') + (st.enriching ? '  ·  TMDB: ' + st.enrichLeft + ' kaldı' : '') + (st.queue ? '  ·  sırada ' + st.queue : '');
   $('#cStop').style.display = act ? '' : 'none';
   $('#cSpin').classList.toggle('on', !!act);
   const bar = $('#cBar'), det = act && st.progTotal > 0 && (st.phase === 'resolve' || st.phase === 'list'); bar.className = 'bar' + (!act ? ' idle' : det ? ' det' : '');
@@ -540,6 +558,8 @@ function renderCrawler(sum, running) {
       cBtn('M3U8 kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked(), 'm3u8')); } catch (e) { msg(e.message); } }),
       cBtn('M3U kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked(), 'm3u')); } catch (e) { msg(e.message); } }),
       cBtn('M3U8 kopyala', async () => { try { msg(await copyText(await ghost.invoke('crawl-copy-m3u', s.host, picked())) ? 'M3U8 kopyalandı' : 'Kopyalanamadı'); } catch (e) { msg(e.message); } }),
+      cBtn('Yenileri kontrol et', async () => { const urls = s.cats.filter(c => c.done).map(c => c.url); if (!urls.length) return msg('Önce bir kategoriyi tamamen tara'); const r = await ghost.invoke('crawl-list', s.host, urls, cPg); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
+      cBtn("GitHub'a yükle", async () => { try { msg(await ghost.invoke('crawl-github', s.host)); } catch (e) { msg(e.message); } refreshCrawler(); }),
       cBtn('Kategori ekle', async () => { const u = await promptBox('Kategori sayfasının adresi'); if (!u) return; const n = (await promptBox('Kategori adı (isteğe bağlı)')) || ''; const r = await ghost.invoke('crawl-addcat', s.host, n, u); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
       cBtn('Siteyi sil', async () => { if (await confirmBox(s.host + ' kayıtları silinsin mi?')) { await ghost.invoke('crawl-remove', s.host); cLastSig = ''; refreshCrawler(); } }, 'danger'));
     det.append(tool2);
@@ -552,7 +572,7 @@ function renderCrawler(sum, running) {
         if (cb.checked && !c.done) { const r = await ghost.invoke('crawl-list', s.host, [c.url], cPg); if (r) msg(r); else if ($('#cAuto').checked) await ghost.invoke('crawl-resolve', s.host, [c.url], cLim); cLastSig = ''; refreshCrawler(); }
       };
       const nm = document.createElement('span'); nm.className = 'cn'; const clb = document.createElement('small'); clb.className = 'clb'; clb.textContent = 'KATEGORİ ' + (ci + 1); nm.append(clb, document.createTextNode((c.group ? c.group + ' › ' : '') + c.name)); const cic = document.createElement('span'); cic.className = 'cic'; cic.textContent = '🎬';
-      const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.total ? ' · ' + Math.min(c.pages, c.total) + '/' + c.total + ' sayfa' : '') + (c.failed ? ' · ⚠ ' + c.failed : '') + (c.done ? ' ✓' : '') : 'taranmadı';
+      const ct = document.createElement('em'); ct.textContent = c.films ? c.films + ' film' + (c.resolved ? ' · ' + c.resolved + ' video' : '') + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.total ? ' · ' + Math.min(c.pages, c.total) + '/' + c.total + ' sayfa' : '') + (c.lastNew ? ' · +' + c.lastNew + ' yeni' : '') + (c.failed ? ' · ⚠ ' + c.failed : '') + (c.done ? ' ✓' : '') : 'taranmadı';
       const sp = document.createElement('span'); sp.className = 'spin'; sm.append(cb, cic, nm, sp, ct); cd.append(sm);
       const prev = cCounts[s.host + c.url]; if (prev !== undefined && prev !== c.films) { ct.classList.add('pulse'); } cCounts[s.host + c.url] = c.films;
       const body = document.createElement('div'); cd.append(body);
@@ -610,18 +630,19 @@ $('#lClear').onclick = async () => { if (await confirmBox('Tüm video kayıtlar�
 $('#hClear').onclick = async () => { if (await confirmBox('Tüm geçmiş silinsin mi?')) { await ghost.invoke('history-clear'); loadHistory(); } };
 
 $('#dots').onclick = async () => {
-  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
+  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['gh', 'GitHub aktarımı'], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
   if (v === 'tmdb') {
     const k = await promptBox('TMDB API anahtarı (boş bırakırsan silinir). Anahtar girersen ad, afiş, yıl ve puan TMDB\'den gelir. Ücretsiz anahtar: themoviedb.org → Ayarlar → API', cKey);
     if (k === null) return; $('#tKey').value = k; $('#tSave').click();
   } else if (v === 'theme') { await themeModal();
   } else if (v === 'imp') { await importModal();
+  } else if (v === 'gh') { await githubModal();
   } else if (v === 'lay') { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l);
   } else if (v === 'fx') {
     const m = await pickModal('Süsleme', FX.MODES, FX.mode()); if (m !== null) FX.setMode(m);
   } else if (v === 'eco') FX.setEco(!FX.eco());
 };
-{ const lb = document.getElementById('layBtn'); if (lb) { lb.textContent = layoutName(); lb.onclick = async () => { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l); }; } const ib = document.getElementById('impBtn'); if (ib) ib.onclick = importModal; setLayout(ld2('gbLayout', 'default')); }
+{ const lb = document.getElementById('layBtn'); if (lb) { lb.textContent = layoutName(); lb.onclick = async () => { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l); }; } const gb = document.getElementById('ghBtn'); if (gb) gb.onclick = githubModal; const ib = document.getElementById('impBtn'); if (ib) ib.onclick = importModal; setLayout(ld2('gbLayout', 'default')); }
 { const tb = document.getElementById('themeBtn'); if (tb) { tb.textContent = GBTheme.current().name; tb.onclick = themeModal; } }
 document.querySelectorAll('select').forEach(enhanceSelect);
 init();

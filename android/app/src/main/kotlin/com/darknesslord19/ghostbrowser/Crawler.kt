@@ -8,6 +8,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.net.URI
 
 /** Crawler'ın ana etkinlikten ihtiyaç duyduğu şeyler. */
@@ -16,6 +18,8 @@ interface CrawlHost {
     fun release(t: Tab)
     fun awake(on: Boolean)
     fun saveText(name: String, text: String): String
+    fun setting(k: String): String
+    fun flag(k: String): Boolean
 }
 
 /**
@@ -259,6 +263,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         val j = jobs.removeFirstOrNull()
         if (j == null) {
             finish("Tamamlandı")
+            if (host.flag("githubAuto")) githubSync("")
             return
         }
         val after = { step(600, g) { nextJob(g) } }
@@ -306,6 +311,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         var url = ""
         var pages = 0
         var clicks = 0
+        var initial = 0
+        var wasDone = false
 
         fun start() {
             val cc = findCat(j.site, j.cat)
@@ -315,6 +322,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             }
             cat = cc
             films = cc.optJSONArray("films") ?: JSONArray().also { cc.put("films", it) }
+            initial = films.length()
+            wasDone = cc.optBoolean("done")
             for (i in 0 until films.length()) seen.add(films.getJSONObject(i).optString("url"))
             url = if (cc.optBoolean("done") || cc.optString("next").isEmpty()) cc.optString("url") else cc.optString("next")
             if (cc.optBoolean("done")) cc.put("pages", 0)
@@ -418,6 +427,10 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             val cc = cat ?: return done()
             cc.put("next", if (complete) "" else next)
             cc.put("done", complete)
+            if (wasDone) {
+                cc.put("lastNew", films.length() - initial)
+                cc.put("lastCheck", System.currentTimeMillis())
+            }
             schedule()
             done()
         }
@@ -637,6 +650,101 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         nextFilm()
     }
 
+
+    // ---------------- GitHub aktarımı ----------------
+    @Volatile var ghStatus = ""
+        private set
+    @Volatile private var ghBusy = false
+
+    private fun gitBlobSha(b: ByteArray): String {
+        val md = java.security.MessageDigest.getInstance("SHA-1")
+        md.update(("blob " + b.size + "\u0000").toByteArray())
+        md.update(b)
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun ghConn(url: String, method: String, token: String): HttpURLConnection {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.requestMethod = method
+        c.connectTimeout = 20000
+        c.readTimeout = 60000
+        c.setRequestProperty("Authorization", "token $token")
+        c.setRequestProperty("Accept", "application/vnd.github+json")
+        c.setRequestProperty("User-Agent", "GhostBrowser")
+        return c
+    }
+
+    /** Dosyayı repoya yazar (varsa günceller). Dönüş: null = tamam, "=" = değişmedi, aksi halde hata metni. */
+    private fun ghPut(repo: String, path: String, text: String, branch: String, token: String): String? {
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        val enc = path.split('/').joinToString("/") { java.net.URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
+        val api = "https://api.github.com/repos/$repo/contents/$enc"
+        var sha = ""
+        val g = ghConn(api + if (branch.isNotEmpty()) "?ref=" + java.net.URLEncoder.encode(branch, "UTF-8") else "", "GET", token)
+        val gc = g.responseCode
+        if (gc == 200) {
+            sha = JSONObject(g.inputStream.bufferedReader().readText()).optString("sha")
+            if (sha == gitBlobSha(bytes)) return "="
+        } else if (gc == 401) return "Token geçersiz (401)"
+        else if (gc == 403) return "Yetki yok / limit (403)"
+        else if (gc != 404) return "GitHub hatası ($gc)"
+        val body = JSONObject().put("message", "Ghost Tarayıcı: $path").put("content", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
+        if (sha.isNotEmpty()) body.put("sha", sha)
+        if (branch.isNotEmpty()) body.put("branch", branch)
+        val p = ghConn(api, "PUT", token)
+        p.doOutput = true
+        p.outputStream.use { it.write(body.toString().toByteArray()) }
+        val pc = p.responseCode
+        if (pc == 200 || pc == 201) return null
+        val err = try { p.errorStream?.bufferedReader()?.readText() ?: "" } catch (_: Exception) { "" }
+        val msg = try { JSONObject(err).optString("message") } catch (_: Exception) { err.take(120) }
+        return "Yazılamadı ($pc): " + msg.take(120)
+    }
+
+    /** JSON + M3U8 + M3U dosyalarını GitHub deposuna yükler. h boşsa tüm siteler. */
+    fun githubSync(h: String): String {
+        val repo = host.setting("githubRepo").trim().removePrefix("https://github.com/").trim('/')
+        val token = host.setting("githubToken").trim()
+        val branch = host.setting("githubBranch").trim()
+        val dir = host.setting("githubPath").trim().trim('/').ifEmpty { "ghost-tarayici" }
+        if (!Regex("[\\w.-]+/[\\w.-]+").matches(repo)) return "GitHub repo adı 'kullanici/depo' biçiminde olmalı"
+        if (token.isEmpty()) return "GitHub token (ghp_…) gir"
+        if (ghBusy) return "GitHub yüklemesi zaten sürüyor"
+        val files = ArrayList<Pair<String, String>>()
+        val keys = if (h.isEmpty()) sites.keys().asSequence().toList() else listOf(h)
+        for (k in keys) {
+            if (sites.optJSONObject(k) == null) continue
+            val base = fileBase(k)
+            files.add("$dir/$base.json" to export(k))
+            try {
+                val m = exportM3u(k, JSONArray()).first
+                files.add("$dir/$base.m3u8" to m)
+                files.add("$dir/$base.m3u" to m)
+            } catch (_: Exception) {
+            }
+        }
+        if (files.isEmpty()) return "Yüklenecek kayıt yok"
+        ghBusy = true
+        ghStatus = "GitHub: hazırlanıyor…"
+        Thread {
+            var ok = 0
+            var same = 0
+            var err = ""
+            try {
+                for ((i, f) in files.withIndex()) {
+                    ghStatus = "GitHub: " + (i + 1) + "/" + files.size + " · " + f.first.substringAfterLast('/')
+                    val r = ghPut(repo, f.first, f.second, branch, token)
+                    if (r == null) ok++ else if (r == "=") same++ else { err = r; break }
+                }
+            } catch (e: Exception) {
+                err = "Bağlantı hatası: " + (e.message ?: "").take(80)
+            }
+            ghStatus = if (err.isEmpty()) "GitHub: $ok yüklendi" + (if (same > 0) ", $same değişmedi" else "") + " ✓" else "GitHub: $err"
+            ghBusy = false
+        }.start()
+        return "GitHub yüklemesi başladı (" + files.size + " dosya)"
+    }
+
     // ---------------- TMDB (isteğe bağlı) ----------------
     @Volatile var enriching = false
         private set
@@ -764,7 +872,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
-        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size)
+        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("gh", ghStatus).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size)
 
     fun summary(): JSONArray {
         val out = JSONArray()
@@ -786,7 +894,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     if (fo.has("tmdb")) info++
                 }
                 ca.put(JSONObject().put("name", c.optString("name")).put("group", c.optString("group")).put("url", c.optString("url"))
-                    .put("films", fl.length()).put("resolved", res).put("failed", failed).put("info", info).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")).put("total", c.optInt("totalPages")))
+                    .put("films", fl.length()).put("resolved", res).put("lastNew", c.optInt("lastNew")).put("lastCheck", c.optLong("lastCheck")).put("failed", failed).put("info", info).put("done", c.optBoolean("done")).put("pages", c.optInt("pages")).put("total", c.optInt("totalPages")))
             }
             out.put(JSONObject().put("host", h).put("url", s.optString("url")).put("title", s.optString("title")).put("time", s.optLong("time")).put("cats", ca))
         }

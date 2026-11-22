@@ -135,6 +135,8 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         history = History(this)
         links = Links(this)
         crawler = Crawler(this, object : CrawlHost {
+            override fun setting(k: String): String = store.str(k)
+            override fun flag(k: String): Boolean = store.bool(k)
             override fun hiddenTab(): Tab {
                 val wv = WebView(this@MainActivity)
                 val t = Tab(++seq, wv)
@@ -1386,6 +1388,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-addcat" -> reply(true, crawler.addCat(args.optString(0), args.optString(1), args.optString(2)))
                 "crawl-list" -> reply(true, crawler.list(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 5)))
                 "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
+                "crawl-github" -> reply(true, crawler.githubSync(args.optString(0)))
                 "crawl-retry" -> reply(true, crawler.retry(args.optString(0), args.optString(1), args.optJSONArray(2) ?: JSONArray()))
                 "crawl-enrich" -> reply(true, crawler.enrich(args.optString(0), args.optJSONArray(1) ?: JSONArray(), store.str("tmdbKey")))
                 "crawl-stop" -> { crawler.stop(); crawler.stopEnrich(); reply(true, true) }
