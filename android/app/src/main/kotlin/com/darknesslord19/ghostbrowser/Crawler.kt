@@ -315,6 +315,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         var wasDone = false
         var probeStage = 0
         var triedStart = false
+        var startUrl = ""
         var probePage = 2
         var probeBase = ""
 
@@ -498,10 +499,18 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 log("probe p1 added=$added total=" + films.length())
                 return finish(true, "")
             }
-            if (!triedStart && pages == 0 && added > 0 && added <= 15 && !url.contains("page=")) {
+            if (!triedStart && pages == 0 && added > 0 && added <= 40 && next.isEmpty() && !url.contains("page=")) {
                 triedStart = true
+                startUrl = url
                 log("az film var ($added), ?page=1 deneniyor")
                 url = url.substringBefore('#') + (if (url.contains('?')) "&" else "?") + "page=1"
+                step(500, g) { page() }
+                return
+            }
+            if (triedStart && pages == 0 && added == 0 && startUrl.isNotEmpty()) {
+                log("?page=1 sonuç vermedi, ilk adrese dönülüyor")
+                url = startUrl
+                startUrl = ""
                 step(500, g) { page() }
                 return
             }
@@ -534,7 +543,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             } else if (probeStage == 0 && pages == 1 && next.isEmpty() && !nc && added >= 5) {
                 probeStage = 1
                 probePage = 2
-                probeBase = url.substringBefore('#') + (if (url.contains('?')) "&" else "?") + "page="
+                val pb = url.substringBefore('#').replace(Regex("[?&]page=\\d+"), "")
+                probeBase = pb + (if (pb.contains('?')) "&" else "?") + "page="
                 log("sayfalama bulunamadı, ?page= deneniyor")
                 url = probeBase + "2"
                 step(500, g) { page() }
