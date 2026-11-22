@@ -441,10 +441,12 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             var rounds = 0
             var grew = false
 
+            var snap: String? = null
             fun tick() {
                 evalJs(SCROLL_JS, g) { r ->
                     val cnt = r?.toIntOrNull() ?: 0
                     rounds++
+                    if (cnt > best && cnt in 4..80) evalJs(LIST_JS, g) { sx -> if (sx != null) snap = sx }
                     if (cnt > best) {
                         if (best >= 0) grew = true
                         best = cnt
@@ -455,7 +457,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     val enough = stale >= (if (best <= 3) 8 else if (grew) 4 else 2)
                     if (enough || rounds >= maxRounds) {
                         log("scroll rounds=$rounds cards=$cnt best=$best v=" + BuildConfig.VERSION_NAME)
-                        evalJs(LIST_JS, g) { x -> process(x) }
+                        evalJs(LIST_JS, g) { x -> process(if (cnt == 0 && snap != null) snap else x) }
                     } else step(700, g) { tick() }
                 }
             }
