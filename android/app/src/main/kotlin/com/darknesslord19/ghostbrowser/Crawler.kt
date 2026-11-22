@@ -658,6 +658,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     var waited = 0
 
                     fun fail() {
+                        evalJs(DIAG_JS, g) { d -> log("çözülemedi: " + f.optString("url").takeLast(40) + " " + (d ?: "")) }
                         if (f.optInt("tried") == 0) {
                             f.put("tried", 1)
                             todo.add(f)
@@ -1267,7 +1268,10 @@ fetch(u,{headers:{'X-Requested-With':'fetch'},credentials:'same-origin'}).then(r
 return '1'})()"""
 
         /** Oynat düğmesine basar, oynatıcı alanının merkez koordinatını döndürür. */
+        val DIAG_JS = """(()=>{try{const t=document.body?document.body.innerText.replace(/\s+/g,' ').slice(0,90):'';return JSON.stringify({i:[...document.querySelectorAll('iframe')].map(f=>(f.src||'').slice(0,70)).slice(0,3),pre:(document.querySelector('[data-dp-preroll]')||{getAttribute(){return ''}}).getAttribute('data-dp-preroll'),v:document.querySelectorAll('video').length,t:t})}catch(e){return ''}})()"""
+
         val CLICK_JS = """(()=>{try{
+try{const ev=()=>new CustomEvent('dp:preroll',{detail:'done'});const pe=document.querySelector('[data-dp-preroll]');if(pe&&pe.parentElement)pe.parentElement.dispatchEvent(ev());window.dispatchEvent(ev())}catch(x){}
 const sel=['.play-that-video','.play-icon','.vjs-big-play-button','.jw-icon-display','.plyr__control--overlaid','[class*=play-btn]','[class*=playBtn]','[class*=btn-play]','.play-button','#play','button[aria-label*=lay]','[data-preroll-slot]','#cstk','[data-player] button'];
 for(const s of sel){const e=document.querySelector(s);if(e&&e.offsetParent!==null){try{e.click()}catch(x){}break}}
 document.querySelectorAll('video').forEach(v=>{try{v.muted=true;v.play()}catch(x){}});
