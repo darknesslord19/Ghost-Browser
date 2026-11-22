@@ -239,6 +239,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         bar.orientation = LinearLayout.HORIZONTAL
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setBackgroundColor(cBar)
+        bar.elevation = dp(4).toFloat()
         bar.setPadding(dp(8), dp(6), dp(4), dp(6))
 
         btnBack = ib("back") { cur?.webView?.let { if (it.canGoBack()) it.goBack() } }
@@ -290,9 +291,11 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         btnMedia.gravity = Gravity.CENTER
         btnMedia.setTypeface(btnMedia.typeface, android.graphics.Typeface.BOLD)
         val mb = GradientDrawable()
-        mb.setColor(cAcc)
+        mb.setColor(Color.parseColor("#3A2A66"))
+        mb.setStroke(dp(1), cAcc)
         mb.cornerRadius = dp(16).toFloat()
         btnMedia.background = mb
+        btnMedia.setTextColor(Color.parseColor("#D4C4FF"))
         btnMedia.setPadding(dp(10), 0, dp(10), 0)
         btnMedia.isFocusable = true
         btnMedia.isClickable = true
@@ -424,7 +427,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
     private fun display(u: String): String = when {
         u.isEmpty() || u.startsWith(ASSET + "newtab") -> ""
         u.startsWith(ASSET + "player") -> "🎬 Ghost Oynatıcı"
-        u.startsWith(ASSET + "settings") -> "ghost://settings"
+        u.startsWith(ASSET + "settings") -> ""
         else -> u
     }
 
@@ -631,16 +634,73 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
         main.postDelayed({ if (popup.isShowing) popup.dismiss() }, 15000)
     }
 
+    private fun mediaLabel(it: MediaItem): Pair<String, String> {
+        val u = Uri.parse(it.url)
+        val path = (u.path ?: "")
+        val file = path.substringAfterLast('/')
+        val host = u.host ?: ""
+        return when {
+            it.kind == "HLS ★" -> "Otomatik kalite" to "Önerilen · " + host
+            Regex("sublist_?(\\d+)", RegexOption.IGNORE_CASE).containsMatchIn(file) ->
+                "Kalite listesi " + Regex("sublist_?(\\d+)", RegexOption.IGNORE_CASE).find(file)!!.groupValues[1] to host
+            file.contains("aud", true) && file.contains("sublist", true) -> "Ses parçası" to host
+            it.kind == "DASH" -> "DASH akışı" to host
+            it.kind == "HLS" -> "HLS akışı" to host + " · " + file.takeLast(24)
+            else -> "Video" to host + " · " + file.takeLast(24)
+        }
+    }
+
     private fun showMedia() {
         val t = cur ?: return
-        val items = t.media.map {
-            val u = Uri.parse(it.url)
-            it.kind + " · " + (u.host ?: "") + (u.path ?: "").takeLast(36)
-        }.toTypedArray()
-        dialog()
-            .setTitle("Ghost Oynatıcı'da aç")
-            .setItems(items) { _, i -> val m = t.media[i]; newTab(playerUrl(m.url, t.title, m.ref)) }
-            .show()
+        val big = big()
+        val k = if (big) 1.25f else 1f
+        fun sz(v: Int) = (dp(v) * k).toInt()
+        val ref = arrayOfNulls<PopupWindow>(1)
+        val card = LinearLayout(this)
+        card.orientation = LinearLayout.VERTICAL
+        val title = TextView(this)
+        title.text = "Ghost Oynatıcı'da aç"
+        title.setTextColor(Color.WHITE)
+        title.textSize = if (big) 20f else 17f
+        title.setTypeface(title.typeface, android.graphics.Typeface.BOLD)
+        title.setPadding(dp(12), dp(2), dp(12), dp(8))
+        card.addView(title)
+        val shown = t.media.filter { !(it.url.contains("aud", true) && it.url.contains("sublist", true)) }.ifEmpty { t.media }
+        for (m in shown) {
+            val (name, sub) = mediaLabel(m)
+            val r = LinearLayout(this)
+            r.orientation = LinearLayout.HORIZONTAL
+            r.gravity = Gravity.CENTER_VERTICAL
+            r.isFocusable = true
+            r.isClickable = true
+            r.background = focusBg()
+            r.setPadding(dp(12), dp(8), dp(12), dp(8))
+            r.addView(IconView(this, "play"), LinearLayout.LayoutParams(sz(22), sz(22)))
+            val col = LinearLayout(this)
+            col.orientation = LinearLayout.VERTICAL
+            col.setPadding(dp(14), 0, 0, 0)
+            val a1 = TextView(this)
+            a1.text = name
+            a1.setTextColor(Color.parseColor("#ECECF4"))
+            a1.textSize = if (big) 17f else 15f
+            a1.setTypeface(a1.typeface, android.graphics.Typeface.BOLD)
+            val a2 = TextView(this)
+            a2.text = sub
+            a2.setTextColor(cDim)
+            a2.textSize = if (big) 13f else 12f
+            a2.setSingleLine()
+            a2.ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+            col.addView(a1)
+            col.addView(a2)
+            r.addView(col, LinearLayout.LayoutParams(0, -2, 1f))
+            r.setOnClickListener { ref[0]?.dismiss(); newTab(playerUrl(m.url, t.title, m.ref)) }
+            card.addView(r, LinearLayout.LayoutParams(-1, -2))
+        }
+        val w = minOf(sz(360), resources.displayMetrics.widthPixels - dp(32))
+        val popup = cardPopup(w, card)
+        ref[0] = popup
+        popup.showAtLocation(window.decorView, Gravity.CENTER, 0, 0)
+        card.getChildAt(1)?.requestFocus()
     }
 
     private fun showMenu() {

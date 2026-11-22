@@ -53,6 +53,13 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   .hist{flex-wrap:wrap}
   .hist a small{display:block;margin-left:0}
   .litem button{width:36px;height:36px}
+  .src{flex-wrap:wrap}
+  .src .u{flex:1 1 100%}
+  nav::-webkit-scrollbar{display:none}
+  nav{scrollbar-width:none;background:var(--bg2);gap:6px}
+  nav a{background:var(--bg3);border:1px solid var(--line);color:var(--dim)}
+  nav a.on{background:var(--grad);border-color:transparent;color:#fff;font-weight:600}
+  #msg{left:14px;right:14px;bottom:14px;text-align:center}
 }
 </style></head>
 <body data-spatial>
@@ -130,7 +137,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   <div id="hList"></div>
 </section>
 
-<section id="about"><h2>Ghost Browser</h2><div class="card">Film izlemeye odaklı Electron tabanlı tarayıcı. Kendi oynatıcısı (HLS/MP4/WebM, altyazı), reklam engelleyici, GitHub kontrollü site listesi ve telefondan QR ile kumanda.<br><br><span class="dim">DRM'li (Widevine) servisler — Netflix, Disney+ vb. — stok Electron'da çalışmaz. Yasal ücretsiz kaynaklar ve doğrudan video bağlantıları sorunsuz oynar.</span></div></section>
+<section id="about"><h2>Ghost Browser</h2><div class="card">Film izlemeye odaklı tarayıcı. Kendi oynatıcısı (HLS/MP4/WebM, altyazı), reklam engelleyici, GitHub kontrollü site listesi ve telefondan QR ile kumanda.<br><br><span class="dim">DRM'li (Widevine) servisler — Netflix, Disney+ vb. — bu tarayıcıda çalışmaz. Yasal ücretsiz kaynaklar ve doğrudan video bağlantıları sorunsuz oynar.</span></div></section>
 </main>
 <div id="msg"></div>
 <script src="ghost://static/spatial.js"></script>
