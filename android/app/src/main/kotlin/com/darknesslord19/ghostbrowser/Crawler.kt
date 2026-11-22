@@ -658,7 +658,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     var waited = 0
 
                     fun fail() {
-                        evalJs(DIAG_JS, g) { d -> log("çözülemedi: " + f.optString("url").takeLast(40) + " " + (d ?: "")) }
+                        evalJs(DIAG_JS, g) { d -> cat.put("log", (cat.optString("log") + "\nçözülemedi: " + f.optString("url").takeLast(40) + " " + (d ?: "")).takeLast(3000)) }
                         if (f.optInt("tried") == 0) {
                             f.put("tried", 1)
                             todo.add(f)
