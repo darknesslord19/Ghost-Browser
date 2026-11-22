@@ -49,6 +49,12 @@ pre { background: #0f0f17; border: 1px solid var(--line); border-radius: 10px; p
 .mbox .mb { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 button.sel { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 120px; height: 38px; text-align: left; }
 button.sel::after { content: '▾'; opacity: .6; }
+.litem { position: relative; }
+.litem .fbar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--bg3); display: none; overflow: hidden; }
+.litem.run .fbar { display: block; }
+.litem .fbar i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg, #8b5cf6, #ec4899); border-radius: 99px; animation: fslide 1s ease-in-out infinite; }
+.litem.run { background: #8b5cf61a; }
+@keyframes fslide { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
 .ctool.h { flex-wrap: nowrap; }
 .ctool.h button { flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px; font-size: 13px; white-space: nowrap; }
 #cPct { font-weight: 800; font-size: 18px; background: linear-gradient(90deg, #8b5cf6, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; margin-right: 8px; }
@@ -283,7 +289,7 @@ async function loadLinks() {
     const det = document.createElement('details'); det.open = !q && groups.size <= 3 || !!q; det.className = 'lgrp';
     const sum = document.createElement('summary'); sum.innerHTML = '<span class="lh"></span><b></b><em></em>'; sum.querySelector('.lh').textContent = host.charAt(0).toUpperCase(); sum.querySelector('b').textContent = host; sum.querySelector('em').textContent = items.length + ' video'; det.append(sum);
     items.forEach(l => {
-      const d = document.createElement('div'); d.className = 'litem';
+      const d = document.createElement('div'); d.className = 'litem'; d.dataset.u = f.url;
       const t = document.createElement('div'); t.className = 'lt'; const n = document.createElement('div'); n.className = 'ln'; n.textContent = l.title || l.src; const sm = document.createElement('small'); sm.textContent = l.src.replace(/^https?:\/\//, '').slice(0, 80) + ' · ' + new Date(l.time).toLocaleDateString('tr-TR'); t.append(n, sm);
       const mk = (txt, title, fn, cls) => { const b = document.createElement('button'); b.textContent = txt; b.title = title; if (cls) b.className = cls; b.onclick = fn; return b; };
       const play = () => ghost.invoke('open', 'ghost://player?src=' + encodeURIComponent(l.src) + (l.title ? '&title=' + encodeURIComponent(l.title) : '') + (l.ref ? '&ref=' + encodeURIComponent(l.ref) : ''), { newTab: true });
@@ -299,7 +305,7 @@ async function loadLinks() {
 }
 
 // ---- site tarayıcı ----
-let cPg = 200, cLim = 100000, cKey = '', cCounts = {}, cSup = null, cLastSig = '', cSel = new Set(), cOpen = new Set(), cTimer = null;
+let cScrolled = {}, cPg = 200, cLim = 100000, cKey = '', cCounts = {}, cSup = null, cLastSig = '', cSel = new Set(), cOpen = new Set(), cTimer = null;
 async function loadCrawler() {
   if (cSup === null) { try { await ghost.invoke('crawl-state'); cSup = true; } catch (e) { cSup = false; } }
   if (!cSup) { $('#crawler').innerHTML = '<h2>Site Tarayıcı</h2><div class="card dim">Bu özellik şimdilik yalnızca Android sürümünde çalışır.</div>'; return; }
@@ -319,6 +325,9 @@ async function refreshCrawler() {
   const pct = det ? Math.min(100, Math.round(st.prog / st.progTotal * 100)) : 0;
   if (det) bar.style.setProperty('--w', pct + '%');
   $('#cPct').textContent = det ? pct + '%' : '';
+  document.querySelectorAll('.litem.run').forEach(e => { if (!act || e.dataset.u !== st.curUrl) e.classList.remove('run'); });
+  if (act && st.phase === 'resolve' && st.curUrl) { const r = [...document.querySelectorAll('.litem')].find(e => e.dataset.u === st.curUrl); if (r) { r.classList.add('run'); if (!cScrolled[st.curUrl]) { cScrolled[st.curUrl] = 1; } } }
+  (st.recent || []).forEach(x => { const r = [...document.querySelectorAll('.litem')].find(e => e.dataset.u === x.u); if (!r) return; const sm = r.querySelector('small'); if (x.t === 1 && sm) sm.textContent = '▶ ' + x.v.replace(/^https?:\/\//, '').slice(0, 70); else if (x.t === 2 && sm) sm.textContent = '✕ video bulunamadı'; });
   const cur = $('#cCur'); cur.style.display = act && st.phase === 'resolve' && st.cur ? 'block' : 'none'; if (st.cur) cur.textContent = '▶ ' + st.cur;
   $('#cFind').disabled = st.running;
   document.querySelectorAll('.ccat').forEach(e => e.classList.toggle('busy', !!st.running && e.dataset.url === st.cat));
@@ -399,6 +408,7 @@ function filmRow(f) {
   if (tm && tm.overview) { const ov = document.createElement('small'); ov.textContent = tm.overview.slice(0, 110) + (tm.overview.length > 110 ? '…' : ''); t.append(ov); }
   const mk = (txt, title, fn) => { const b = document.createElement('button'); b.textContent = txt; b.title = title; b.onclick = fn; return b; };
   const play = () => f.video ? ghost.invoke('open', 'ghost://player?src=' + encodeURIComponent(f.video) + '&title=' + encodeURIComponent((tm && tm.title) || f.title || '') + '&ref=' + encodeURIComponent(f.videoRef || f.url), { newTab: true }) : ghost.invoke('open', f.url, { newTab: true });
+  const fb = document.createElement('div'); fb.className = 'fbar'; fb.innerHTML = '<i></i>'; d.append(fb);
   d.append(t, mk('▶', f.video ? 'Ghost Oynatıcı\'da oynat' : 'Film sayfasını aç', play), mk('⧉', f.video ? 'Video adresini kopyala' : 'Film adresini kopyala', async () => msg(await copyText(f.video || f.url) ? 'Kopyalandı' : 'Kopyalanamadı')), mk('↗', 'Film sayfasını aç', () => ghost.invoke('open', f.url, { newTab: true })));
   return d;
 }

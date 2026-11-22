@@ -98,6 +98,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         phase = ""
         curCat = ""
         curTitle = ""
+        curUrl = ""
         prog = 0
         progTotal = 0
         gen++
@@ -255,6 +256,22 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
     @Volatile var curTitle = ""
         private set
+    @Volatile var curUrl = ""
+        private set
+    private val recentRes = java.util.ArrayDeque<JSONObject>()
+
+    private fun recent(): JSONArray {
+        val a = JSONArray()
+        synchronized(recentRes) { for (o in recentRes) a.put(o) }
+        return a
+    }
+
+    private fun noteRes(u: String, v: String, t: Int) {
+        synchronized(recentRes) {
+            recentRes.addLast(JSONObject().put("u", u).put("v", v).put("t", t))
+            while (recentRes.size > 60) recentRes.removeFirst()
+        }
+    }
 
     private fun prefix(): String = "(${totalJobs - jobs.size}/$totalJobs) "
 
@@ -479,7 +496,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         val todo = ArrayList<JSONObject>()
         for (i in 0 until films.length()) {
             val f = films.getJSONObject(i)
-            if (f.optString("video").isEmpty() && f.optInt("tried") != 1 && !(f.has("eps") && f.optInt("eps") > 0)) todo.add(f)
+            if (f.optString("video").isEmpty() && f.optInt("tried") < 2 && !(f.has("eps") && f.optInt("eps") > 0)) todo.add(f)
             if (todo.size >= j.n) break
         }
         var idx = 0
@@ -493,6 +510,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             val f = todo[idx++]
             prog = idx
             curTitle = f.optString("title")
+            curUrl = f.optString("url")
             status = prefix() + "Video çözülüyor " + idx + "/" + todo.size
             if (isSeries(f.optString("url")) && !f.has("eps")) {
                 status = prefix() + "Bölümler aranıyor " + idx + "/" + todo.size
@@ -534,26 +552,35 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 } else {
                     var waited = 0
 
+                    fun fail() {
+                        if (f.optInt("tried") == 0) {
+                            f.put("tried", 1)
+                            todo.add(f)
+                            progTotal = todo.size
+                        } else {
+                            f.put("tried", 2)
+                            noteRes(f.optString("url"), "", 2)
+                        }
+                        schedule()
+                        step(80, g) { nextFilm() }
+                    }
+
                     fun poll() {
                         if (t.media.isNotEmpty()) {
-                            step(450, g) {
+                            step(800, g) {
                                 val m = pickMedia(t)
                                 if (m != null) {
-                                    f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis())
-                                } else f.put("tried", 1)
-                                schedule()
-                                step(80, g) { nextFilm() }
+                                    f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis()).put("tried", 0)
+                                    noteRes(f.optString("url"), m.url, 1)
+                                    schedule()
+                                    step(80, g) { nextFilm() }
+                                } else fail()
                             }
                             return
                         }
                         waited += 300
-                        if (waited == 1200 || waited == 5400) evalJs(CLICK_JS, g) { tap(it) }
-                        if (waited >= 13000) {
-                            f.put("tried", 1)
-                            schedule()
-                            step(80, g) { nextFilm() }
-                            return
-                        }
+                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000) evalJs(CLICK_JS, g) { tap(it) }
+                        if (waited >= 20000) return fail()
                         step(300, g) { poll() }
                     }
                     poll()
@@ -690,7 +717,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
-        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("cur", curTitle).put("queue", jobs.size)
+        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size)
 
     fun summary(): JSONArray {
         val out = JSONArray()
