@@ -1425,6 +1425,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-resolve" -> reply(true, crawler.resolve(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optInt(2, 20)))
                 "crawl-fresh" -> reply(true, crawler.fresh(args.optString(0), args.optString(1), args.optString(2)) && crawler.resolve(args.optString(0), JSONArray().put(args.optString(1)), 1).isNotEmpty())
                 "diag-run" -> reply(true, crawler.diagRun(args.optString(0), args.optInt(1, 20), args.optString(2)))
+                "diag-fetch" -> reply(true, crawler.diagFetchRun(args.optString(0)))
                 "diag-result" -> reply(true, crawler.diagResult())
                 "relay-status" -> reply(true, relay.status)
                 "crawl-github" -> reply(true, crawler.githubSync(args.optString(0)))

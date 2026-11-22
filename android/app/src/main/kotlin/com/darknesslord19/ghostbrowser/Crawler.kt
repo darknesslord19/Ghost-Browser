@@ -791,6 +791,15 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         return "başladı"
     }
     fun diagResult(): String = diagOut
+    fun diagFetchRun(cmd: String): String {
+        diagOut = ""
+        Thread {
+            val o = JSONObject()
+            try { diagFetch(JSONObject(cmd), o) } catch (e: Exception) { o.put("error", e.toString()) }
+            diagOut = o.toString()
+        }.start()
+        return "başladı"
+    }
 
     private fun diagFetch(cmd: JSONObject, out: JSONObject) {
         val u = cmd.optString("url")
@@ -799,6 +808,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         c.readTimeout = 30000
         c.instanceFollowRedirects = true
         c.setRequestProperty("User-Agent", cmd.optString("ua", "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36"))
+        cmd.optJSONObject("headers")?.let { hh -> for (k in hh.keys()) c.setRequestProperty(k, hh.optString(k)) }
         val ref = cmd.optString("ref")
         if (ref.isNotEmpty()) {
             c.setRequestProperty("Referer", ref)
