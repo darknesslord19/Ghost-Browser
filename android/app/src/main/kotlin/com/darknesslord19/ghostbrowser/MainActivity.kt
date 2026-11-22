@@ -290,7 +290,21 @@ post({hello:1});
 
     override fun onResume() {
         super.onResume()
-        try { relay.start() } catch (_: Exception) {}
+        try {
+            relay.start()
+            val on = store.str("relayLink").contains("/mcp/")
+            val i = Intent(this, KeepAliveService::class.java)
+            if (on) {
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+                if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
+                val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+                val sp = getSharedPreferences("gb_misc", MODE_PRIVATE)
+                if (!pm.isIgnoringBatteryOptimizations(packageName) && !sp.getBoolean("bat_asked", false)) {
+                    sp.edit().putBoolean("bat_asked", true).apply()
+                    startActivity(Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+                }
+            } else stopService(i)
+        } catch (_: Exception) {}
         cur?.webView?.onResume()
     }
 
