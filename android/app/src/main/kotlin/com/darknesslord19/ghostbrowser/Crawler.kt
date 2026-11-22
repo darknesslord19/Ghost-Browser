@@ -801,11 +801,11 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     }
 
     @Volatile private var diagOut = ""
-    fun diagRun(url: String, wait: Int, js: String): String {
+    fun diagRun(url: String, wait: Int, js: String, pre: String = ""): String {
         diagOut = ""
         Thread {
             val o = JSONObject()
-            try { diagProbe(JSONObject().put("url", url).put("wait", wait).put("js", js), o) } catch (e: Exception) { o.put("error", e.toString()) }
+            try { diagProbe(JSONObject().put("url", url).put("wait", wait).put("js", js).put("pre", pre).put("noclick", pre.isNotEmpty()), o) } catch (e: Exception) { o.put("error", e.toString()) }
             diagOut = o.toString()
         }.start()
         return "başladı"
@@ -860,7 +860,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 lateinit var tk: () -> Unit
                 tk = {
                     waited += 500
-                    if (waited % 3000 == 0) evalJs(CLICK_JS, g) { tap(it) }
+                    if (waited % 3000 == 0 && !cmd.optBoolean("noclick")) evalJs(CLICK_JS, g) { tap(it) }
+                    if (waited == 500 && cmd.optString("pre").isNotEmpty()) evalJs(cmd.optString("pre"), g) { }
                     if (waited >= waitMs) {
                         val js = cmd.optString("js").ifEmpty { "'-'" }
                         evalJs(DIAG2_JS, g) { d ->
