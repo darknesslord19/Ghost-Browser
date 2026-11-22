@@ -576,15 +576,16 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         return sb.toString() to n
     }
 
-    fun saveM3u(h: String, urls: JSONArray): String {
+    private fun fileBase(h: String): String = (if (h.isEmpty()) "tum-siteler" else h).replace(Regex("[^A-Za-z0-9._-]"), "_")
+
+    fun saveM3u(h: String, urls: JSONArray, ext: String): String {
         val (text, n) = exportM3u(h, urls)
-        val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date())
-        return host.saveText("ghost-$h-$stamp.m3u8", text) + " ($n video)"
+        val e = if (ext == "m3u") "m3u" else "m3u8"
+        return host.saveText(fileBase(h) + "." + e, text) + " ($n video)"
     }
 
     fun saveFile(h: String): String {
-        val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date())
-        return host.saveText("ghost-" + (if (h.isEmpty()) "tum-siteler" else h) + "-" + stamp + ".json", export(h))
+        return host.saveText(fileBase(h) + ".json", export(h))
     }
 
     /** Dışa aktarılmış JSON'u mevcut kayıtlara ekler. Eklenen film sayısını döndürür. */

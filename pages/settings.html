@@ -310,7 +310,8 @@ function renderCrawler(sum, running) {
       cBtn('Hepsini seç', () => { const all = s.cats.every(c => cSel.has(c.url)); s.cats.forEach(c => all ? cSel.delete(c.url) : cSel.add(c.url)); cLastSig = ''; refreshCrawler(); }),
       cBtn('JSON kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save', s.host)); } catch (e) { msg(e.message); } }),
       cBtn('Kopyala', async () => { msg(await copyText(await ghost.invoke('crawl-export', s.host)) ? 'JSON kopyalandı' : 'Kopyalanamadı'); }),
-      cBtn('M3U8 kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked())); } catch (e) { msg(e.message); } }),
+      cBtn('M3U8 kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked(), 'm3u8')); } catch (e) { msg(e.message); } }),
+      cBtn('M3U kaydet', async () => { try { msg('Kaydedildi: ' + await ghost.invoke('crawl-save-m3u', s.host, picked(), 'm3u')); } catch (e) { msg(e.message); } }),
       cBtn('M3U8 kopyala', async () => { try { msg(await copyText(await ghost.invoke('crawl-copy-m3u', s.host, picked())) ? 'M3U8 kopyalandı' : 'Kopyalanamadı'); } catch (e) { msg(e.message); } }),
       cBtn('Kategori ekle', async () => { const u = prompt('Kategori sayfasının adresi'); if (!u) return; const n = prompt('Kategori adı (isteğe bağlı)') || ''; const r = await ghost.invoke('crawl-addcat', s.host, n, u); if (r) msg(r); cLastSig = ''; refreshCrawler(); }),
       cBtn('Siteyi sil', async () => { if (confirm(s.host + ' kayıtları silinsin mi?')) { await ghost.invoke('crawl-remove', s.host); cLastSig = ''; refreshCrawler(); } }, 'danger'));

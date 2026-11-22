@@ -157,18 +157,51 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 else if (!immersive || customView == null) window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
             override fun saveText(name: String, text: String): String {
-                if (Build.VERSION.SDK_INT >= 29) {
-                    val cv = android.content.ContentValues()
-                    cv.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
-                    cv.put(android.provider.MediaStore.Downloads.MIME_TYPE, if (name.endsWith(".json")) "application/json" else "application/x-mpegURL")
-                    val uri = contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv) ?: throw RuntimeException("Dosya oluşturulamadı")
-                    contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
-                    return "İndirilenler/$name"
+                val bytes = text.toByteArray(Charsets.UTF_8)
+                val mime = when {
+                    name.endsWith(".json") -> "application/json"
+                    name.endsWith(".m3u8") -> "application/x-mpegURL"
+                    else -> "audio/x-mpegurl"
                 }
-                val dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: filesDir
+                if (Build.VERSION.SDK_INT >= 29) {
+                    val rel = Environment.DIRECTORY_DOWNLOADS + "/Ghost Browser"
+                    val coll = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                    var uri: Uri? = null
+                    try {
+                        contentResolver.query(coll, arrayOf(android.provider.MediaStore.Downloads._ID),
+                            android.provider.MediaStore.Downloads.DISPLAY_NAME + "=? AND " + android.provider.MediaStore.Downloads.RELATIVE_PATH + " LIKE ?",
+                            arrayOf(name, "$rel%"), null)?.use { c ->
+                            if (c.moveToFirst()) uri = android.content.ContentUris.withAppendedId(coll, c.getLong(0))
+                        }
+                    } catch (_: Exception) {}
+                    var written = false
+                    uri?.let {
+                        try {
+                            contentResolver.openOutputStream(it, "wt")?.use { o -> o.write(bytes) }
+                            written = true
+                        } catch (_: Exception) {}
+                    }
+                    if (!written) {
+                        val cv = android.content.ContentValues()
+                        cv.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
+                        cv.put(android.provider.MediaStore.Downloads.MIME_TYPE, mime)
+                        cv.put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "$rel/")
+                        val u = contentResolver.insert(coll, cv) ?: throw RuntimeException("Dosya oluşturulamadı")
+                        contentResolver.openOutputStream(u)?.use { o -> o.write(bytes) }
+                    }
+                    return "İndirilenler/Ghost Browser/$name"
+                }
+                var dir = java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Ghost Browser")
+                try {
+                    dir.mkdirs()
+                    val f = java.io.File(dir, name)
+                    f.writeBytes(bytes)
+                    return f.absolutePath
+                } catch (_: Exception) {}
+                dir = java.io.File(getExternalFilesDir(null) ?: filesDir, "Ghost Browser")
                 dir.mkdirs()
                 val f = java.io.File(dir, name)
-                f.writeText(text)
+                f.writeBytes(bytes)
                 return f.absolutePath
             }
         }, main, resources.displayMetrics.density)
@@ -1257,7 +1290,7 @@ setInterval(scan,1200);document.addEventListener('DOMContentLoaded',scan);
                 "crawl-enrich" -> reply(true, crawler.enrich(args.optString(0), args.optJSONArray(1) ?: JSONArray(), store.str("tmdbKey")))
                 "crawl-stop" -> { crawler.stop(); crawler.stopEnrich(); reply(true, true) }
                 "crawl-export" -> reply(true, crawler.export(args.optString(0)))
-                "crawl-save-m3u" -> try { reply(true, crawler.saveM3u(args.optString(0), args.optJSONArray(1) ?: JSONArray())) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }
+                "crawl-save-m3u" -> try { reply(true, crawler.saveM3u(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optString(2, "m3u8"))) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }
                 "crawl-copy-m3u" -> try { reply(true, crawler.exportM3u(args.optString(0), args.optJSONArray(1) ?: JSONArray()).first) } catch (e: Exception) { reply(false, null, e.message ?: "Liste yok") }
                 "crawl-save" -> try { reply(true, crawler.saveFile(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }
                 "crawl-import" -> try { reply(true, crawler.import(args.optString(0))) } catch (e: Exception) { reply(false, null, e.message ?: "İçe aktarılamadı") }
