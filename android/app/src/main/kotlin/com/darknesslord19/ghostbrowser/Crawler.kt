@@ -1389,7 +1389,7 @@ const base=""" + org.json.JSONObject.quote(base) + """;
 const slug=base.toLowerCase().replace(/\.(html?|php|asp)${'$'}/,'').replace(/-(dizi-izle|izle|dizi)${'$'}/,'');
 const h=document.documentElement.outerHTML.split('\\/').join('/');
 const seen={};const out=[];
-const add=(p,s,e)=>{const k=s+'x'+e;if(seen[k]||!(s>=0)||!(e>=0))return;seen[k]=1;out.push({u:location.origin+p,s:s,e:e})};
+const add=(p,s,e)=>{const k=s+'x'+e;if(seen[k]||!(s>=0)||!(e>=0))return;seen[k]=1;let u;try{u=new URL(p,location.href).href}catch(x){return}if(u.indexOf(location.origin)!==0)return;out.push({u:u,s:s,e:e})};
 const re=/\/[a-z0-9_\-\/.%]*?\d{1,2}x\d{1,3}(?:-c\d+)?(?=["'\\?\s<#&])/gi;let m;
 while((m=re.exec(h))){const p=m[0];const seg=p.split('/').pop().toLowerCase();
  const mm=seg.match(/^(.*?)-(\d{1,2})x(\d{1,3})(?:-c\d+)?${'$'}/);if(!mm)continue;
