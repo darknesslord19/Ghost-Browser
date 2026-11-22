@@ -257,8 +257,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 </section>
 
 <section id="crawler"><h2>Site Tarayıcı</h2>
-  <div class="dim" style="margin-bottom:10px">Herhangi bir film sitesinin kategorilerini bulur, filmleri listeler ve video adreslerini toplar. Sonucu JSON olarak kaydedebilirsin.</div>
-  <div class="row"><input id="cUrl" type="url" placeholder="https://film-sitesi.com" style="flex:1"><button class="primary" id="cFind">Kategorileri bul</button></div>
+  <div class="row" style="margin-top:0"><input id="cUrl" type="url" placeholder="https://film-sitesi.com" style="flex:1"><button class="primary" id="cFind">Kategorileri bul</button></div>
   <div class="card" id="cStat" style="display:none;margin-top:10px"><div class="srow"><span class="spin" id="cSpin"></span><span id="cPct"></span><span id="cMsg"></span></div><div id="cCur"></div><div class="bar" id="cBar"><i></i></div><div class="row" style="margin-top:8px"><button id="cStop" class="danger">Durdur</button><label class="dim" style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" id="cAuto" style="width:18px;height:18px;accent-color:var(--acc)"> Taramadan sonra videoları da çöz</label></div></div>
   <div id="cSites"></div>
   <div class="card" id="tmdbCard" style="margin-top:14px"><b>TMDB (isteğe bağlı)</b>
