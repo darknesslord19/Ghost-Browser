@@ -1499,7 +1499,7 @@ post({hello:1});
                 }
                 "history" -> reply(true, history.recent(minOf(args.optInt(1, 100), 500), args.optString(0)))
                 "crawl-state" -> { crawler.diagStart(); reply(true, crawler.stateJson()) }
-                "crawl-sites" -> reply(true, crawler.summary())
+                "crawl-sites" -> reply(true, crawler.summary(args.optString(0)))
                 "crawl-films" -> reply(true, crawler.films(args.optString(0), args.optString(1)))
                 "crawl-log" -> reply(true, crawler.log(args.optString(0), args.optString(1)))
                 "crawl-discover" -> reply(true, crawler.discover(args.optString(0)))

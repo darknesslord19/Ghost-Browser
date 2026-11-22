@@ -1143,10 +1143,11 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
         .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("gh", ghStatus).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size)
 
-    fun summary(): JSONArray {
+    fun summary(only: String = ""): JSONArray {
         val out = JSONArray()
         val keys = sites.keys().asSequence().toList().sortedByDescending { sites.getJSONObject(it).optLong("time") }
         for (h in keys) {
+            if (only.isNotEmpty() && !h.contains(only)) continue
             val s = sites.getJSONObject(h)
             val ca = JSONArray()
             val src = cats(s)
