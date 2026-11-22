@@ -731,11 +731,13 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     }
 
                     var chal = 0
+                    var adBusy = false
                     lateinit var pollRef: () -> Unit
                     fun cont() {
                         if (waited >= 1500 && ensureTab().lockUrl.isEmpty()) ensureTab().lockUrl = ensureTab().url.substringBefore("#")
-                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000 || waited == 20000 || waited == 27000) evalJs(CLICK_JS, g) { tap(it) }
-                        if (waited >= 20000) return fail()
+                        if (waited == 1500 || waited == 4500 || waited == 9000 || waited == 14000 || waited == 20000 || waited == 27000 || waited == 34000 || waited == 41000) evalJs(CLICK_JS, g) { tap(it) }
+                        if (waited == 9000 || waited == 18000) evalJs("(/reklam|advert|skip ad/i.test((document.body?document.body.innerText:'').slice(0,600))?'1':'0')", g) { a -> if ((a ?: "").contains("1")) adBusy = true }
+                        if (waited >= (if (adBusy) 45000 else 20000)) return fail()
                         step(300, g) { pollRef() }
                     }
 
