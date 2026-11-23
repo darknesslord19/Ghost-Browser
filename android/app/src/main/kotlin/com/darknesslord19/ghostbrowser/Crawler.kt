@@ -751,7 +751,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
                     fun poll() {
                         if (t.media.isNotEmpty()) {
-                            step(if (fast) 250 else 800, g) {
+                            step(800, g) {
                                 val m = pickMedia(t)
                                 if (m != null) {
                                     f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis()).put("tried", 0)
