@@ -79,7 +79,7 @@ button.sel::after { content: '▾'; opacity: .6; }
 #dots { display: none; position: fixed; top: 10px; right: 10px; z-index: 50; width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--bg2) 80%, transparent); border: 1px solid var(--line); color: var(--txt); font-size: 22px; line-height: 1; align-items: center; justify-content: center; padding: 0; backdrop-filter: blur(6px); }
 .solo #dots { display: flex; }
 .solo #tmdbCard { display: none; }
-.solo main { position: relative; z-index: 3; padding-top: 74px; }
+.solo main { position: relative; z-index: 3; padding-top: 80px; }
 body.solo { background: transparent !important; }
 html:has(body.solo) { background: var(--bgimg, linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--acc) 12%, var(--bg)) 100%)) fixed !important; }
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; display: none; }
@@ -182,7 +182,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 }
 
 /* Cloude bağlantı robotu (yalnız tarayıcı modunda, sol üst) */
-#gbot { display: none; position: fixed; top: 10px; left: 10px; z-index: 50; width: 56px; height: 56px; cursor: pointer; }
+#gbot { display: none; position: fixed; top: 10px; left: 10px; z-index: 50; width: 62px; height: 62px; cursor: pointer; }
 .solo #gbot { display: block; }
 #gbot .bot { position: absolute; inset: 0; animation: gbbob 4.6s ease-in-out infinite; transform-origin: 50% 90%; }
 @keyframes gbbob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-3px) rotate(1.5deg); } }
@@ -208,6 +208,62 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 #gbot[data-state="active"] .eye { height: 35%; }
 #gbot[data-state="off"] .eye { background: #7d8594; box-shadow: none; height: 22%; }
 #gbot.happy .eye { height: 19%; border-radius: 60% 60% 30% 30%; transform: translateY(-8%); }
+  /* ---------- ifadeler ---------- */
+  #gbot.ex-happy .eye {  height: 19%; border-radius: 60% 60% 30% 30%; transform: translateY(-8%); }
+  #gbot.ex-heart .eyes {  filter: drop-shadow(0 0 4px rgba(255,80,150,.95)) drop-shadow(0 0 9px rgba(255,80,150,.5)); }
+  #gbot.ex-heart .eye {  width: 19%; height: 44%; border-radius: 0; background: linear-gradient(160deg, #ffd1e6, #ff4d94 70%); box-shadow: none; animation: gbheartbeat .55s ease-in-out infinite alternate;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21s-7.5-4.6-9.6-9.3C.8 8 2.9 4.5 6.3 4.5c2 0 3.6 1.1 4.4 2.6.8-1.5 2.4-2.6 4.4-2.6 3.4 0 5.5 3.5 3.9 7.2C19.5 16.4 12 21 12 21z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21s-7.5-4.6-9.6-9.3C.8 8 2.9 4.5 6.3 4.5c2 0 3.6 1.1 4.4 2.6.8-1.5 2.4-2.6 4.4-2.6 3.4 0 5.5 3.5 3.9 7.2C19.5 16.4 12 21 12 21z'/%3E%3C/svg%3E") center / contain no-repeat; }
+  @keyframes gbheartbeat { from { transform: scale(.88); } to { transform: scale(1.12); } }
+  #gbot.ex-wink .eye:first-child {  transform: scaleY(.1); }
+  #gbot.ex-wink .eye:last-child {  height: 36%; }
+  #gbot.ex-side .eyes {  animation: gbsidelook 1.7s ease-in-out both; }
+  @keyframes gbsidelook { 0% { transform: translateX(0); } 18%,42% { transform: translateX(-24%); } 58%,82% { transform: translateX(24%); } 100% { transform: translateX(0); } }
+  #gbot.ex-roll .eyes {  animation: gbrolleyes 1.7s ease-in-out both; }
+  @keyframes gbrolleyes { 0% { transform: translate(0,0); } 20% { transform: translate(0,-14%); } 40% { transform: translate(16%,-3%); } 60% { transform: translate(0,12%); } 80% { transform: translate(-16%,-3%); } 100% { transform: translate(0,0); } }
+  #gbot.ex-wow .eye {  width: 14%; height: 50%; }
+  #gbot.ex-wow .bot {  animation: gbhop .5s ease-out 1, gbbob 4.6s ease-in-out .5s infinite; }
+  @keyframes gbhop { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-7px) scale(1.04); } 100% { transform: translateY(0) scale(1); } }
+  #gbot.ex-sleepy .eye {  height: 11%; border-radius: 60% 60% 50% 50%; transition: height 1s ease; }
+  #gbot.ex-sleepy .bot {  animation: gbnod 2.2s ease-in-out infinite; }
+  @keyframes gbnod { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(2px) rotate(5deg); } }
+
+  /* ---------- kayan yazı (göz bölgesi) ---------- */
+  #gbot .tkwrap {  position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .25s; }
+  #gbot.tk-on .tkwrap {  opacity: 1; }
+  #gbot.tk-on .eyes {  opacity: 0; }
+  #gbot .tkin {  position: absolute; top: 50%; left: 0; white-space: nowrap; font: 800 11.5px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .8px; color: #eafff6; text-shadow: 0 0 5px rgba(110,240,190,.95), 0 0 12px rgba(52,211,153,.7); transform: translate(var(--vw, 70px), -50%); will-change: transform; }
+  #gbot[data-state="active"] .tkin {  color: #fff; text-shadow: 0 0 5px rgba(236,72,153,.95), 0 0 12px rgba(139,92,246,.8); }
+  #gbot.tk-run .tkin {  animation: gbtick var(--dur, 4s) linear forwards; }
+  @keyframes gbtick { from { transform: translate(var(--vw, 70px), -50%); } to { transform: translate(-100%, -50%); } }
+
+  /* ---------- yeni ifadeler ---------- */
+  #gbot.ex-angry .eye {  height: 27%; width: 12%; background: radial-gradient(circle at 50% 42%, #fff 0%, #ffd0d0 45%, #ff5a5a 100%); box-shadow: 0 0 7px 1px rgba(255,100,100,.95), 0 0 16px 3px rgba(255,60,60,.5); }
+  #gbot.ex-angry .eye:first-child {  transform: rotate(24deg); } .ex-angry .eye:last-child { transform: rotate(-24deg); }
+  #gbot.ex-angry .bot {  animation: gbshake .09s linear 8; }
+  @keyframes gbshake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px) rotate(-1.5deg); } 75% { transform: translateX(2px) rotate(1.5deg); } }
+  #gbot.ex-sad .eye {  height: 30%; }
+  #gbot.ex-sad .eye:first-child {  transform: rotate(-20deg); } .ex-sad .eye:last-child { transform: rotate(20deg); }
+  #gbot.ex-sad .eye:last-child::after {  content: ""; position: absolute; left: 50%; top: 105%; width: 70%; height: 80%; margin-left: -35%; border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%; background: #9fdcff; box-shadow: 0 0 5px #7cc9ff; animation: gbtear 1.1s ease-in infinite; }
+  @keyframes gbtear { 0% { transform: translateY(-30%); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(150%); opacity: 0; } }
+  #gbot.ex-star .eyes {  filter: drop-shadow(0 0 4px rgba(255,214,90,.95)) drop-shadow(0 0 9px rgba(255,190,60,.55)); }
+  #gbot.ex-star .eye {  width: 20%; height: 46%; border-radius: 0; background: linear-gradient(160deg, #fff6c9, #ffc933 75%); box-shadow: none; animation: gbspinstar 1.6s linear infinite;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5l3 7 7.5.7-5.7 5 1.8 7.4L12 17.6l-6.6 4 1.8-7.4-5.7-5L9 8.5z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5l3 7 7.5.7-5.7 5 1.8 7.4L12 17.6l-6.6 4 1.8-7.4-5.7-5L9 8.5z'/%3E%3C/svg%3E") center / contain no-repeat; }
+  @keyframes gbspinstar { to { transform: rotate(360deg); } }
+  #gbot.ex-dizzy .eye {  width: 17%; height: 48%; background: repeating-radial-gradient(circle at 50% 50%, #fff 0 1.2px, rgba(0,0,0,0) 1.2px 3px); box-shadow: 0 0 8px rgba(150,220,255,.8); animation: gbspinstar .9s linear infinite; }
+  #gbot.ex-dizzy .eyes {  animation: gbwobble 1.2s ease-in-out both; }
+  @keyframes gbwobble { 0%,100% { transform: translate(0,0); } 25% { transform: translate(6%,-6%); } 50% { transform: translate(0,6%); } 75% { transform: translate(-6%,-6%); } }
+  #gbot.ex-laugh .eye {  height: 19%; border-radius: 60% 60% 30% 30%; transform: translateY(-8%); }
+  #gbot.ex-laugh .bot {  animation: gblaugh .22s ease-in-out 8 alternate; }
+  @keyframes gblaugh { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-4px) rotate(3deg); } }
+  #gbot.ex-scan .eye {  height: 22%; }
+  #gbot.ex-scan .eyes {  animation: gbscan 1.8s ease-in-out both; }
+  @keyframes gbscan { 0%,100% { transform: translateX(0); } 12% { transform: translateX(-20%); } 37% { transform: translateX(20%); } 62% { transform: translateX(-20%); } 87% { transform: translateX(20%); } }
+
+
+#gbot .eye { position: relative; }
+#gbot .eyes { transition: transform .35s cubic-bezier(.3,.9,.3,1), opacity .25s; }
 @media (prefers-reduced-motion: reduce) { #gbot .bot, #gbot .rim.rain, #gbot .halo { animation: none !important; } }
 </style></head>
 <body data-spatial>
@@ -216,7 +272,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   <a href="#genel">⚙ Genel</a><a href="#siteler">🎞 Siteler (GitHub)</a><a href="#adblock">🛡 Reklam engelleme</a>
   <a href="#remote">📱 Telefon kumandası</a><a href="#links">🎞 Videolar</a><a href="#crawler">🕷 Site Tarayıcı</a><a href="#history">🕘 Geçmiş</a><a href="#about">ℹ Hakkında</a>
 </nav>
-<script>if(/[?&]only=crawler/.test(location.search))document.body.classList.add("solo")</script><canvas id="fx"></canvas><button id="dots" aria-label="Menü">⋮</button><div id="gbot" data-state="off" aria-hidden="true"><div class="bot"><div class="halo green"></div><div class="halo rain"></div><div class="sphere"></div><div class="visor"></div><div class="rim off"></div><div class="rim green"></div><div class="rim rain"></div><div class="eyes" id="gbEyes"><div class="eye"></div><div class="eye"></div></div></div></div>
+<script>if(/[?&]only=crawler/.test(location.search))document.body.classList.add("solo")</script><canvas id="fx"></canvas><button id="dots" aria-label="Menü">⋮</button><div id="gbot" data-state="off" aria-hidden="true"><div class="bot"><div class="halo green"></div><div class="halo rain"></div><div class="sphere"></div><div class="visor"><div class="tkwrap"><div class="tkin" id="gbTk"></div></div></div><div class="rim off"></div><div class="rim green"></div><div class="rim rain"></div><div class="eyes" id="gbEyes"><div class="eye"></div><div class="eye"></div></div></div></div>
 <main>
 <section id="genel"><h2>Genel</h2>
   <div class="card">
@@ -679,7 +735,7 @@ $('#hClear').onclick = async () => { if (await confirmBox('Tüm geçmiş silinsi
 
 $('#dots').onclick = async () => {
   let fastOn = true; try { const st = await ghost.invoke('settings'); fastOn = !(st && st.slowResolve); } catch (e) {}
-  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['gh', 'GitHub aktarımı'], ['rl', 'Cloude bağlantısı'], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['fast', '⚡ Hızlı video çözme (Plus): ' + (fastOn ? 'Açık' : 'Kapalı')], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
+  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['gh', 'GitHub aktarımı'], ['rl', 'Cloude bağlantısı'], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['bot', '🤖 Robot yazıları'], ['fast', '⚡ Hızlı video çözme (Plus): ' + (fastOn ? 'Açık' : 'Kapalı')], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
   if (v === 'tmdb') {
     const k = await promptBox('TMDB API anahtarı (boş bırakırsan silinir). Anahtar girersen ad, afiş, yıl ve puan TMDB\'den gelir. Ücretsiz anahtar: themoviedb.org → Ayarlar → API', cKey);
     if (k === null) return; $('#tKey').value = k; $('#tSave').click();
@@ -696,6 +752,7 @@ $('#dots').onclick = async () => {
   } else if (v === 'lay') { const l = await pickModal('Görünüm', [['default', 'Varsayılan'], ['step', 'Basamak']], ld2('gbLayout', 'default')); if (l !== null) setLayout(l);
   } else if (v === 'fx') {
     const m = await pickModal('Süsleme', FX.MODES, FX.mode()); if (m !== null) FX.setMode(m);
+  } else if (v === 'bot') { if (window.gbBotEdit) await window.gbBotEdit();
   } else if (v === 'fast') { await ghost.invoke('set', { slowResolve: fastOn }); msg(fastOn ? 'Hızlı çözme kapalı (eski yöntem)' : 'Hızlı çözme açık');
   } else if (v === 'eco') FX.setEco(!FX.eco());
 };
@@ -706,11 +763,85 @@ document.querySelectorAll('select').forEach(enhanceSelect);
 init();
 
 (function () {
-  var bot = document.getElementById('gbot'), eyes = document.getElementById('gbEyes'), hold = 0;
+  var bot = document.getElementById('gbot'), eyes = document.getElementById('gbEyes'), tkin = document.getElementById('gbTk'), visor = bot.querySelector('.visor'), hold = 0, ticking = false;
+  var DEF = { tap: 'Dokunma Hızır', lines: ['Cloude bağlı ✓', 'Merhaba!', 'Ghost hazır', 'Komut bekliyorum…', 'Hızır emrinde'] };
+  var cfg = { tap: DEF.tap, lines: DEF.lines.slice(), on: true };
+  window.gbBotCfg = cfg;
+  async function loadCfg() {
+    try {
+      var st = await ghost.invoke('settings') || {};
+      if (st.botTap) cfg.tap = st.botTap;
+      if (st.botLines !== undefined && st.botLines !== '') cfg.lines = String(st.botLines).split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+      cfg.on = !st.botTickerOff;
+    } catch (e) {}
+  }
+  function pickLine() { return cfg.lines.length ? cfg.lines[Math.floor(Math.random() * cfg.lines.length)] : ''; }
+
   function blink() { bot.classList.add('blink'); setTimeout(function () { bot.classList.remove('blink'); }, 130); }
-  (function bl() { setTimeout(function () { if (bot.dataset.state !== 'off') { blink(); if (Math.random() < .25) setTimeout(blink, 260); } bl(); }, 1800 + Math.random() * 3600); })();
+  (function bl() { setTimeout(function () { if (bot.dataset.state !== 'off' && !ticking) { blink(); if (Math.random() < .25) setTimeout(blink, 260); } bl(); }, 1800 + Math.random() * 3600); })();
   (function look() { setTimeout(function () { var st = bot.dataset.state, x = (st === 'active' ? 10 : 6) * Math.random() - (st === 'active' ? 5 : 3), y = Math.random() * 3 - 1.5; if (st === 'off') { x = 0; y = 2; } eyes.style.transform = 'translate(' + x + '%,' + y + '%)'; setTimeout(function () { eyes.style.transform = 'translate(0,0)'; }, 900 + Math.random() * 900); look(); }, bot.dataset.state === 'active' ? 700 + Math.random() * 900 : 2200 + Math.random() * 2600); })();
-  bot.onclick = function () { bot.classList.add('happy'); setTimeout(function () { bot.classList.remove('happy'); }, 1100); };
+
+  /* kayan yazı */
+  function ticker(text, force) {
+    if (bot.dataset.state === 'off' || !text) return;
+    if (ticking && !force) return;
+    clearEx(); ticking = true;
+    bot.classList.remove('tk-run'); void tkin.offsetWidth;
+    tkin.textContent = text;
+    var vw = visor.clientWidth, tw = tkin.scrollWidth;
+    tkin.style.setProperty('--vw', vw + 'px');
+    tkin.style.setProperty('--dur', ((tw + vw) / 30).toFixed(2) + 's');
+    bot.classList.add('tk-on', 'tk-run');
+  }
+  tkin.addEventListener('animationend', function () { bot.classList.remove('tk-on', 'tk-run'); ticking = false; });
+
+  /* ifadeler */
+  var EX = { heart: 2200, wink: 1100, side: 1700, happy: 1600, wow: 1500, sleepy: 3000, roll: 1700, angry: 1500, sad: 2600, star: 2200, dizzy: 1300, laugh: 1700, scan: 1900 }, names = Object.keys(EX), cur = null, last = '', tm;
+  function clearEx() { if (cur) bot.classList.remove('ex-' + cur); cur = null; clearTimeout(tm); }
+  function play(n) {
+    if (bot.dataset.state === 'off' || ticking) return;
+    clearEx(); cur = n; last = n; bot.classList.add('ex-' + n);
+    tm = setTimeout(function () { bot.classList.remove('ex-' + n); cur = null; }, EX[n]);
+  }
+  function pick() { var n; do { n = names[Math.floor(Math.random() * names.length)]; } while (n === last); return n; }
+  (function s1() { setTimeout(function () { if (!cur && !ticking) play(pick()); s1(); }, 2400 + Math.random() * 2600); })();
+  (function s2() { setTimeout(function () { if (cfg.on && !cur && !ticking) ticker(pickLine()); s2(); }, 9000 + Math.random() * 6000); })();
+
+  /* dokunma */
+  var taps = 0, tapT;
+  bot.onclick = function () {
+    if (bot.dataset.state === 'off') return;
+    taps++; clearTimeout(tapT); tapT = setTimeout(function () { taps = 0; }, 3000);
+    clearEx(); ticking = false; bot.classList.remove('tk-on', 'tk-run');
+    play(taps >= 3 ? 'angry' : (Math.random() < .5 ? 'wow' : 'angry'));
+    setTimeout(function () { ticker(cfg.tap, true); }, 650);
+  };
+
+  /* ayarlar menüsünden: yazıları düzenle */
+  window.gbBotEdit = function () {
+    return mOpen(function (b, close) {
+      var h = document.createElement('h3'); h.textContent = 'Robot yazıları'; b.append(h);
+      var l1 = document.createElement('div'); l1.className = 'dim'; l1.style.cssText = 'padding:4px 8px;font-size:13px'; l1.textContent = 'Dokununca çıkan yazı';
+      var i1 = document.createElement('input'); i1.type = 'text'; i1.maxLength = 40; i1.value = cfg.tap;
+      var l2 = document.createElement('div'); l2.className = 'dim'; l2.style.cssText = 'padding:10px 8px 4px;font-size:13px'; l2.textContent = 'Gözün üstünde kayan yazılar (her satır bir yazı)';
+      var ta = document.createElement('textarea'); ta.maxLength = 600; ta.style.cssText = 'width:100%;min-height:130px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);padding:10px;font:16px system-ui,sans-serif'; ta.value = cfg.lines.join('\n');
+      var sw = document.createElement('label'); sw.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 8px;font-size:15px'; sw.textContent = 'Kayan yazılar kendiliğinden çıksın';
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = cfg.on; cb.style.cssText = 'width:22px;height:22px;accent-color:var(--acc)'; sw.append(cb);
+      var r = document.createElement('div'); r.className = 'mb';
+      var rs = document.createElement('button'); rs.textContent = 'Varsayılan'; rs.onclick = function () { i1.value = DEF.tap; ta.value = DEF.lines.join('\n'); cb.checked = true; };
+      var no = document.createElement('button'); no.textContent = 'Vazgeç'; no.onclick = function () { close(false); };
+      var ok = document.createElement('button'); ok.className = 'primary'; ok.textContent = 'Kaydet';
+      ok.onclick = async function () {
+        cfg.tap = i1.value.trim() || DEF.tap;
+        cfg.lines = ta.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 20);
+        cfg.on = cb.checked;
+        try { await ghost.invoke('set', { botTap: cfg.tap, botLines: cfg.lines.join('\n'), botTickerOff: !cfg.on }); } catch (e) {}
+        close(true); setTimeout(function () { ticker(cfg.tap, true); }, 400);
+      };
+      r.append(rs, no, ok); b.append(l1, i1, l2, ta, sw, r);
+    });
+  };
+
   async function poll() {
     var st = '';
     try { st = String(await ghost.invoke('relay-status')); } catch (e) {}
@@ -720,6 +851,6 @@ init();
     bot.dataset.state = /^Bağlı/.test(st) ? (now < hold ? 'active' : 'idle') : (now < hold ? 'active' : 'off');
     setTimeout(poll, 500);
   }
-  if (document.body.classList.contains('solo')) poll();
+  if (document.body.classList.contains('solo')) { loadCfg(); poll(); }
 })();
 </script></body></html>
