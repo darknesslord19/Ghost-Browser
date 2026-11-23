@@ -79,7 +79,7 @@ button.sel::after { content: '▾'; opacity: .6; }
 #dots { display: none; position: fixed; top: 10px; right: 10px; z-index: 50; width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--bg2) 80%, transparent); border: 1px solid var(--line); color: var(--txt); font-size: 22px; line-height: 1; align-items: center; justify-content: center; padding: 0; backdrop-filter: blur(6px); }
 .solo #dots { display: flex; }
 .solo #tmdbCard { display: none; }
-.solo main { position: relative; z-index: 3; padding-top: 60px; }
+.solo main { position: relative; z-index: 3; padding-top: 74px; }
 body.solo { background: transparent !important; }
 html:has(body.solo) { background: var(--bgimg, linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--acc) 12%, var(--bg)) 100%)) fixed !important; }
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; display: none; }
@@ -180,6 +180,35 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   nav a.on{background:var(--grad);border-color:transparent;color:#fff;font-weight:600}
   #msg{left:14px;right:14px;bottom:96px;text-align:center}
 }
+
+/* Cloude bağlantı robotu (yalnız tarayıcı modunda, sol üst) */
+#gbot { display: none; position: fixed; top: 10px; left: 10px; z-index: 50; width: 56px; height: 56px; cursor: pointer; }
+.solo #gbot { display: block; }
+#gbot .bot { position: absolute; inset: 0; animation: gbbob 4.6s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes gbbob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-3px) rotate(1.5deg); } }
+#gbot .sphere { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff 0%, #f1f4f9 38%, #d3d9e4 78%, #b8c0cf 100%); box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 -4px 8px rgba(120,130,150,.35), inset 0 3px 5px rgba(255,255,255,.9); }
+#gbot .visor { position: absolute; left: 7%; right: 7%; top: 21%; height: 58%; border-radius: 30% / 44%; background: radial-gradient(ellipse at 50% 35%, #12131b 0%, #07080d 70%); overflow: hidden; }
+#gbot .visor::after { content: ""; position: absolute; left: 12%; right: 40%; top: 6%; height: 18%; border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0)); }
+@property --ga { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes gbspin { to { --ga: 360deg; } }
+#gbot .rim { position: absolute; left: 3.2%; right: 3.2%; top: 17.5%; height: 65%; border-radius: 33% / 47%; padding: 4px; opacity: 0; transition: opacity .7s ease; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+#gbot .rim.off { background: linear-gradient(160deg, #3f4652, #4b4f5a 50%, #343944); opacity: 1; }
+#gbot .rim.green { background: conic-gradient(from var(--ga), #22c58b, #6ee7b7, #22c58b, #10b981, #6ee7b7, #22c58b); }
+#gbot .rim.rain { background: conic-gradient(from var(--ga), #22d3ee, #3b82f6, #8b5cf6, #d946ef, #ec4899, #3b82f6, #22d3ee); animation: gbspin 1.9s linear infinite; }
+#gbot .halo { position: absolute; left: -6%; right: -6%; top: 14%; height: 72%; border-radius: 50%; filter: blur(9px); opacity: 0; transition: opacity .7s ease; pointer-events: none; }
+#gbot .halo.green { background: radial-gradient(closest-side, rgba(52,211,153,.55), rgba(52,211,153,0)); }
+#gbot .halo.rain { background: conic-gradient(from var(--ga), rgba(34,211,238,.7), rgba(168,85,247,.7), rgba(236,72,153,.7), rgba(59,130,246,.7), rgba(34,211,238,.7)); animation: gbspin 1.9s linear infinite; }
+#gbot[data-state="idle"] .rim.green { opacity: 1; } #gbot[data-state="idle"] .halo.green { opacity: 1; animation: gbbreathe 3.2s ease-in-out infinite; }
+#gbot[data-state="active"] .rim.rain { opacity: 1; } #gbot[data-state="active"] .halo.rain { opacity: .95; } #gbot[data-state="active"] .rim.green { opacity: 0; }
+@keyframes gbbreathe { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+#gbot .eyes { position: absolute; left: 0; right: 0; top: 21%; height: 58%; display: flex; justify-content: center; gap: 20%; transition: transform .35s cubic-bezier(.3,.9,.3,1); }
+#gbot .eye { width: 10.5%; height: 31%; align-self: center; border-radius: 50%; background: radial-gradient(circle at 50% 42%, #fff 0%, #e9f6ff 45%, #8fd8ff 100%); box-shadow: 0 0 7px 1px rgba(150,220,255,.9), 0 0 16px 3px rgba(110,190,255,.45); transition: transform .12s ease, background .5s, box-shadow .5s, height .3s; }
+#gbot.blink .eye { transform: scaleY(.08); }
+#gbot[data-state="idle"] .eye { background: radial-gradient(circle at 50% 42%, #fff 0%, #e6fff4 45%, #86efc4 100%); box-shadow: 0 0 7px 1px rgba(110,240,190,.9), 0 0 16px 3px rgba(52,211,153,.4); }
+#gbot[data-state="active"] .eye { height: 35%; }
+#gbot[data-state="off"] .eye { background: #7d8594; box-shadow: none; height: 22%; }
+#gbot.happy .eye { height: 19%; border-radius: 60% 60% 30% 30%; transform: translateY(-8%); }
+@media (prefers-reduced-motion: reduce) { #gbot .bot, #gbot .rim.rain, #gbot .halo { animation: none !important; } }
 </style></head>
 <body data-spatial>
 <nav>
@@ -187,7 +216,7 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
   <a href="#genel">⚙ Genel</a><a href="#siteler">🎞 Siteler (GitHub)</a><a href="#adblock">🛡 Reklam engelleme</a>
   <a href="#remote">📱 Telefon kumandası</a><a href="#links">🎞 Videolar</a><a href="#crawler">🕷 Site Tarayıcı</a><a href="#history">🕘 Geçmiş</a><a href="#about">ℹ Hakkında</a>
 </nav>
-<script>if(/[?&]only=crawler/.test(location.search))document.body.classList.add("solo")</script><canvas id="fx"></canvas><button id="dots" aria-label="Menü">⋮</button>
+<script>if(/[?&]only=crawler/.test(location.search))document.body.classList.add("solo")</script><canvas id="fx"></canvas><button id="dots" aria-label="Menü">⋮</button><div id="gbot" data-state="off" aria-hidden="true"><div class="bot"><div class="halo green"></div><div class="halo rain"></div><div class="sphere"></div><div class="visor"></div><div class="rim off"></div><div class="rim green"></div><div class="rim rain"></div><div class="eyes" id="gbEyes"><div class="eye"></div><div class="eye"></div></div></div></div>
 <main>
 <section id="genel"><h2>Genel</h2>
   <div class="card">
@@ -675,4 +704,21 @@ $('#dots').onclick = async () => {
 pasteAll(document.querySelector('main'));
 document.querySelectorAll('select').forEach(enhanceSelect);
 init();
+
+(function () {
+  var bot = document.getElementById('gbot'), eyes = document.getElementById('gbEyes'), hold = 0;
+  function blink() { bot.classList.add('blink'); setTimeout(function () { bot.classList.remove('blink'); }, 130); }
+  (function bl() { setTimeout(function () { if (bot.dataset.state !== 'off') { blink(); if (Math.random() < .25) setTimeout(blink, 260); } bl(); }, 1800 + Math.random() * 3600); })();
+  (function look() { setTimeout(function () { var st = bot.dataset.state, x = (st === 'active' ? 10 : 6) * Math.random() - (st === 'active' ? 5 : 3), y = Math.random() * 3 - 1.5; if (st === 'off') { x = 0; y = 2; } eyes.style.transform = 'translate(' + x + '%,' + y + '%)'; setTimeout(function () { eyes.style.transform = 'translate(0,0)'; }, 900 + Math.random() * 900); look(); }, bot.dataset.state === 'active' ? 700 + Math.random() * 900 : 2200 + Math.random() * 2600); })();
+  bot.onclick = function () { bot.classList.add('happy'); setTimeout(function () { bot.classList.remove('happy'); }, 1100); };
+  async function poll() {
+    var st = '';
+    try { st = String(await ghost.invoke('relay-status')); } catch (e) {}
+    var now = Date.now();
+    if (/komut çalışıyor/.test(st)) hold = now + 2500;
+    bot.dataset.state = /^Bağlı/.test(st) ? (now < hold ? 'active' : 'idle') : (now < hold ? 'active' : 'off');
+    setTimeout(poll, 700);
+  }
+  if (document.body.classList.contains('solo')) poll();
+})();
 </script></body></html>
