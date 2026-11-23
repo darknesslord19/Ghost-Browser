@@ -752,6 +752,9 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                             evalJs("(function(){var i=document.querySelector('iframe[src*=\"/video/embed/\"]');return i?i.src:''})()", g) { r ->
                                 val id = Regex("embed/([A-Za-z0-9_-]+)").find(r ?: "")?.groupValues?.get(1) ?: ""
                                 val m = if (id.isNotEmpty()) t.media.firstOrNull { it.url.contains(id) } else null
+                                if (m != null) evalJs("document.title.slice(0,70)+' | '+location.href.slice(-40)", g) { ti ->
+                                    cat.put("log", (cat.optString("log") + "\nhd[" + f.optString("url").takeLast(28) + "] id=" + id + " title=" + (ti ?: "") + " media=" + t.media.joinToString(",") { it.url.substringAfter("/hls/").take(34) } + " @" + waited).takeLast(3000))
+                                }
                                 if (m != null) {
                                     f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis()).put("tried", 0)
                                     noteRes(f.optString("url"), m.url, 1)
