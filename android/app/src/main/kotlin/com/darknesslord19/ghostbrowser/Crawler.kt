@@ -745,8 +745,11 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                         step(inc.toLong(), g) { pollRef() }
                     }
 
+                    // hdfilmcehennemi: sayfa yüklenir yüklenmez başka bir filmin akışını önceden yükler; gerçek film ikinci adaydır
+                    val hd = f.optString("url").contains("hdfilmcehennemi")
                     fun poll() {
-                        if (t.media.isNotEmpty()) {
+                        if (t.media.isNotEmpty() && !(hd && t.media.size < 2 && waited < 40000)) {
+                            if (hd && t.media.size < 2) return fail()
                             step(800, g) {
                                 val m = pickMedia(t)
                                 cat.put("log", (cat.optString("log") + "\nmedia[" + f.optString("url").takeLast(30) + "] " + t.media.joinToString(" | ") { it.kind + " " + it.url.substringAfter("//").take(80) } + " @" + waited).takeLast(3000))
