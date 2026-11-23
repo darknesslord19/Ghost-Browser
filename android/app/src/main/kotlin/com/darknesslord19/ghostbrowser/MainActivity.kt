@@ -311,7 +311,9 @@ post({hello:1});
 
     override fun onPause() {
         super.onPause()
-        cur?.webView?.onPause()
+        // Claude bağlantısı açıkken sayfayı dondurma: arka planda da komutlar ve çözme işi sürsün
+        if (!store.str("relayLink").contains("/mcp/")) cur?.webView?.onPause()
+        else try { cur?.webView?.resumeTimers() } catch (_: Exception) {}
     }
 
     override fun onDestroy() {

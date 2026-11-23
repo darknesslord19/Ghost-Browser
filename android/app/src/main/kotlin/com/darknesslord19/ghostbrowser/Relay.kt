@@ -76,9 +76,9 @@ class Relay(private val api: RelayApi) {
                     nap(3000)
                 }
                 c.disconnect()
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 status = "Bağlantı yok (" + e.javaClass.simpleName + ")"
-                nap(2500)
+                nap(1500)
             }
         }
     }
