@@ -745,11 +745,26 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                         step(inc.toLong(), g) { pollRef() }
                     }
 
-                    // hdfilmcehennemi: sayfa yüklenir yüklenmez başka bir filmin akışını önceden yükler; gerçek film ikinci adaydır
+                    // hdfilmcehennemi: sayfa başka bir filmin akışını da önceden yükleyebilir; yalnız oynatıcı iframe'inin kimliğini (…/video/embed/<id>) taşıyan akış kabul edilir
                     val hd = f.optString("url").contains("hdfilmcehennemi")
                     fun poll() {
-                        if (t.media.isNotEmpty() && !(hd && t.media.size < 2 && waited < 40000)) {
-                            if (hd && t.media.size < 2) return fail()
+                        if (hd && t.media.isNotEmpty()) {
+                            evalJs("(function(){var i=document.querySelector('iframe[src*=\"/video/embed/\"]');return i?i.src:''})()", g) { r ->
+                                val id = Regex("embed/([A-Za-z0-9_-]+)").find(r ?: "")?.groupValues?.get(1) ?: ""
+                                val m = if (id.isNotEmpty()) t.media.firstOrNull { it.url.contains(id) } else null
+                                if (m != null) {
+                                    f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis()).put("tried", 0)
+                                    noteRes(f.optString("url"), m.url, 1)
+                                    schedule()
+                                    step(80, g) { nextFilm() }
+                                } else {
+                                    waited += inc
+                                    cont()
+                                }
+                            }
+                            return
+                        }
+                        if (t.media.isNotEmpty()) {
                             step(800, g) {
                                 val m = pickMedia(t)
                                 cat.put("log", (cat.optString("log") + "\nmedia[" + f.optString("url").takeLast(30) + "] " + t.media.joinToString(" | ") { it.kind + " " + it.url.substringAfter("//").take(80) } + " @" + waited).takeLast(3000))
