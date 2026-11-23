@@ -749,6 +749,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                         if (t.media.isNotEmpty()) {
                             step(800, g) {
                                 val m = pickMedia(t)
+                                cat.put("log", (cat.optString("log") + "\nmedia[" + f.optString("url").takeLast(30) + "] " + t.media.joinToString(" | ") { it.kind + " " + it.url.substringAfter("//").take(80) } + " @" + waited).takeLast(3000))
                                 if (m != null) {
                                     f.put("video", m.url).put("videoRef", m.ref).put("videoTime", System.currentTimeMillis()).put("tried", 0)
                                     noteRes(f.optString("url"), m.url, 1)
