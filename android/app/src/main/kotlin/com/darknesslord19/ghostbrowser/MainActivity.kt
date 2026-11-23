@@ -289,6 +289,8 @@ post({hello:1});
         if (u != null) newTab(u)
     }
 
+    private var batAsked = false
+
     override fun onResume() {
         super.onResume()
         try {
@@ -300,8 +302,8 @@ post({hello:1});
                 if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
                 val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
                 val sp = getSharedPreferences("gb_misc", MODE_PRIVATE)
-                if (!pm.isIgnoringBatteryOptimizations(packageName) && !sp.getBoolean("bat_asked", false)) {
-                    sp.edit().putBoolean("bat_asked", true).apply()
+                if (!pm.isIgnoringBatteryOptimizations(packageName) && !batAsked) {
+                    batAsked = true
                     startActivity(Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
                 }
             } else stopService(i)
@@ -314,6 +316,12 @@ post({hello:1});
         // Claude bağlantısı açıkken sayfayı dondurma: arka planda da komutlar ve çözme işi sürsün
         if (!store.str("relayLink").contains("/mcp/")) cur?.webView?.onPause()
         else try { cur?.webView?.resumeTimers() } catch (_: Exception) {}
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // arka planda (ekran kapalı/başka uygulama) gizli sekmelerin ve ayar sayfasının zamanlayıcıları durmasın
+        if (store.str("relayLink").contains("/mcp/")) try { cur?.webView?.resumeTimers() } catch (_: Exception) {}
     }
 
     override fun onDestroy() {
@@ -1051,6 +1059,7 @@ post({hello:1});
         val wv = tab.webView
         val s = wv.settings
         s.javaScriptEnabled = true
+        if (Build.VERSION.SDK_INT >= 26) try { wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false) } catch (_: Exception) {}
         s.domStorageEnabled = true
         s.mediaPlaybackRequiresUserGesture = false
         s.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW

@@ -67,7 +67,11 @@ class Relay(private val api: RelayApi) {
                     status = "Bağlı, komut çalışıyor"
                     val body = c.inputStream.bufferedReader().readText()
                     val res = run(JSONObject(body))
-                    post(p.first + "/device/" + p.second + "/result", res)
+                    var sent = false
+                    for (k in 0 until 3) {
+                        try { post(p.first + "/device/" + p.second + "/result", res); sent = true; break } catch (_: Throwable) { nap(800) }
+                    }
+                    if (!sent) status = "Sonuç gönderilemedi"
                     status = "Bağlı"
                 } else if (code == 204) {
                     status = "Bağlı"
