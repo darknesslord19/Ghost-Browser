@@ -630,14 +630,16 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         val cat = findCat(j.site, j.cat) ?: return done()
         val films = cat.optJSONArray("films") ?: return done()
         val todo = ArrayList<JSONObject>()
-        for (pass in 0..1) {
+        var onlyRetry = false
+        for (i in 0 until films.length()) if (films.getJSONObject(i).let { it.has("retry") && it.optString("video").isEmpty() }) { onlyRetry = true; break }
+        for (pass in 0..(if (onlyRetry) 0 else 1)) {
             for (i in 0 until films.length()) {
                 val f = films.getJSONObject(i)
                 if (todo.size >= j.n) break
                 if (todo.contains(f)) continue
                 val rt = f.has("retry")
                 if ((pass == 0) != rt) continue
-                if (f.optString("video").isEmpty() && f.optInt("tried") < 2 && !(f.has("eps") && f.optInt("eps") > 0)) todo.add(f)
+                if (f.optString("video").isEmpty() && (if (rt) f.optInt("tried") < 2 else f.optInt("tried") == 0) && !(f.has("eps") && f.optInt("eps") > 0)) todo.add(f)
             }
         }
         for (f in todo) f.remove("retry")
@@ -724,14 +726,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                             return
                         }
                         evalJs(DIAG_JS, g) { d -> cat.put("log", (cat.optString("log") + "\nçözülemedi: " + f.optString("url").takeLast(40) + " " + (d ?: "")).takeLast(3000)) }
-                        if (f.optInt("tried") == 0) {
-                            f.put("tried", 1)
-                            todo.add(f)
-                            progTotal = todo.size
-                        } else {
-                            f.put("tried", 2)
-                            noteRes(f.optString("url"), "", 2)
-                        }
+                        f.put("tried", 2)
+                        noteRes(f.optString("url"), "", 2)
                         schedule()
                         step(80, g) { nextFilm() }
                     }
