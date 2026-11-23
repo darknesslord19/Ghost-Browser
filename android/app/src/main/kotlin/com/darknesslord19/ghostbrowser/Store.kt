@@ -78,6 +78,7 @@ class Store(ctx: Context, isTv: Boolean) {
                 "tmdbKey" -> settings.put(k, p.optString(k).trim().take(400))
                 "githubRepo", "githubToken", "githubPath", "githubBranch", "relayLink" -> settings.put(k, p.optString(k).trim().take(300))
                 "githubAuto", "diag", "slowResolve", "botTickerOff" -> settings.put(k, p.optBoolean(k))
+                "botEye" -> settings.put(k, p.optString(k).take(20))
                 "botTap" -> settings.put(k, p.optString(k).trim().take(40))
                 "botLines" -> settings.put(k, p.optString(k).take(700))
                 "adblock", "popupBlock", "cosmetic", "tvMode", "remoteEnabled", "askPlayer" -> settings.put(k, p.optBoolean(k))

@@ -735,7 +735,7 @@ $('#hClear').onclick = async () => { if (await confirmBox('Tüm geçmiş silinsi
 
 $('#dots').onclick = async () => {
   let fastOn = true; try { const st = await ghost.invoke('settings'); fastOn = !(st && st.slowResolve); } catch (e) {}
-  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['gh', 'GitHub aktarımı'], ['rl', 'Cloude bağlantısı'], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['bot', '🤖 Robot yazıları'], ['fast', '⚡ Hızlı video çözme (Plus): ' + (fastOn ? 'Açık' : 'Kapalı')], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
+  const v = await pickModal('Menü', [['tmdb', 'TMDB anahtarı' + (cKey ? ' ✓' : '')], ['theme', 'Tema: ' + GBTheme.current().name], ['lay', 'Görünüm: ' + layoutName()], ['gh', 'GitHub aktarımı'], ['rl', 'Cloude bağlantısı'], ['imp', 'İçe aktar'], ['fx', 'Süsleme: ' + FX.label()], ['bot', '🤖 Robot ayarları'], ['fast', '⚡ Hızlı video çözme (Plus): ' + (fastOn ? 'Açık' : 'Kapalı')], ['eco', 'Pil tasarrufu: ' + (FX.eco() ? 'Açık' : 'Kapalı')]], '');
   if (v === 'tmdb') {
     const k = await promptBox('TMDB API anahtarı (boş bırakırsan silinir). Anahtar girersen ad, afiş, yıl ve puan TMDB\'den gelir. Ücretsiz anahtar: themoviedb.org → Ayarlar → API', cKey);
     if (k === null) return; $('#tKey').value = k; $('#tSave').click();
@@ -765,7 +765,7 @@ init();
 (function () {
   var bot = document.getElementById('gbot'), eyes = document.getElementById('gbEyes'), tkin = document.getElementById('gbTk'), visor = bot.querySelector('.visor'), hold = 0, ticking = false;
   var DEF = { tap: 'Dokunma Hızır', lines: ['Cloude bağlı ✓', 'Merhaba!', 'Ghost hazır', 'Komut bekliyorum…', 'Hızır emrinde'] };
-  var cfg = { tap: DEF.tap, lines: DEF.lines.slice(), on: true };
+  var cfg = { tap: DEF.tap, lines: DEF.lines.slice(), on: true, eye: 'random' }, fixed = '';
   window.gbBotCfg = cfg;
   async function loadCfg() {
     try {
@@ -773,6 +773,8 @@ init();
       if (st.botTap) cfg.tap = st.botTap;
       if (st.botLines !== undefined && st.botLines !== '') cfg.lines = String(st.botLines).split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
       cfg.on = !st.botTickerOff;
+      cfg.eye = st.botEye || 'random';
+      applyEye();
     } catch (e) {}
   }
   function pickLine() { return cfg.lines.length ? cfg.lines[Math.floor(Math.random() * cfg.lines.length)] : ''; }
@@ -793,19 +795,25 @@ init();
     tkin.style.setProperty('--dur', ((tw + vw) / 30).toFixed(2) + 's');
     bot.classList.add('tk-on', 'tk-run');
   }
-  tkin.addEventListener('animationend', function () { bot.classList.remove('tk-on', 'tk-run'); ticking = false; });
+  tkin.addEventListener('animationend', function () { bot.classList.remove('tk-on', 'tk-run'); ticking = false; if (cfg.eye === 'yazi') setTimeout(function () { if (cfg.eye === 'yazi' && !ticking) ticker(pickLine()); }, 500); });
 
   /* ifadeler */
   var EX = { heart: 2200, wink: 1100, side: 1700, happy: 1600, wow: 1500, sleepy: 3000, roll: 1700, angry: 1500, sad: 2600, star: 2200, dizzy: 1300, laugh: 1700, scan: 1900 }, names = Object.keys(EX), cur = null, last = '', tm;
-  function clearEx() { if (cur) bot.classList.remove('ex-' + cur); cur = null; clearTimeout(tm); }
+  function clearEx() { if (cur) bot.classList.remove('ex-' + cur); cur = null; clearTimeout(tm); if (fixed && !bot.classList.contains('ex-' + fixed)) bot.classList.add('ex-' + fixed); }
+  function applyEye() {
+    if (fixed) bot.classList.remove('ex-' + fixed);
+    fixed = (cfg.eye && cfg.eye !== 'random' && cfg.eye !== 'normal' && cfg.eye !== 'yazi') ? cfg.eye : '';
+    if (fixed) bot.classList.add('ex-' + fixed);
+    if (cfg.eye === 'yazi' && !ticking) ticker(pickLine(), true);
+  }
   function play(n) {
     if (bot.dataset.state === 'off' || ticking) return;
-    clearEx(); cur = n; last = n; bot.classList.add('ex-' + n);
-    tm = setTimeout(function () { bot.classList.remove('ex-' + n); cur = null; }, EX[n]);
+    clearEx(); if (fixed) bot.classList.remove('ex-' + fixed); cur = n; last = n; bot.classList.add('ex-' + n);
+    tm = setTimeout(function () { bot.classList.remove('ex-' + n); cur = null; if (fixed) bot.classList.add('ex-' + fixed); }, EX[n]);
   }
   function pick() { var n; do { n = names[Math.floor(Math.random() * names.length)]; } while (n === last); return n; }
-  (function s1() { setTimeout(function () { if (!cur && !ticking) play(pick()); s1(); }, 2400 + Math.random() * 2600); })();
-  (function s2() { setTimeout(function () { if (cfg.on && !cur && !ticking) ticker(pickLine()); s2(); }, 9000 + Math.random() * 6000); })();
+  (function s1() { setTimeout(function () { if (cfg.eye === 'random' && !cur && !ticking) play(pick()); s1(); }, 2400 + Math.random() * 2600); })();
+  (function s2() { setTimeout(function () { if (cfg.eye !== 'yazi' && cfg.on && !cur && !ticking) ticker(pickLine()); s2(); }, 9000 + Math.random() * 6000); })();
 
   /* dokunma */
   var taps = 0, tapT;
@@ -820,7 +828,14 @@ init();
   /* ayarlar menüsünden: yazıları düzenle */
   window.gbBotEdit = function () {
     return mOpen(function (b, close) {
-      var h = document.createElement('h3'); h.textContent = 'Robot yazıları'; b.append(h);
+      var h = document.createElement('h3'); h.textContent = 'Robot ayarları'; b.append(h);
+      var le = document.createElement('div'); le.className = 'dim'; le.style.cssText = 'padding:4px 8px;font-size:13px'; le.textContent = 'Göz şekli';
+      var EY = [['random', '🎲 Rastgele'], ['normal', '⚪ Normal'], ['heart', '❤ Kalp'], ['star', '🤩 Yıldız'], ['happy', '😊 Mutlu'], ['angry', '😠 Kızgın'], ['sad', '🥲 Üzgün'], ['dizzy', '😵 Sersem'], ['laugh', '😂 Kahkaha'], ['sleepy', '😴 Uykulu'], ['wow', '😮 Şaşkın'], ['scan', '🔎 Tarama'], ['yazi', '💬 Sadece yazı']];
+      var eyeSel = cfg.eye || 'random';
+      var eg = document.createElement('div'); eg.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:2px 6px 8px';
+      EY.forEach(function (e) { var c = document.createElement('button'); c.textContent = e[1]; c.dataset.v = e[0]; c.style.cssText = 'height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:14px'; c.onclick = function () { eyeSel = e[0]; paint(); }; eg.append(c); });
+      function paint() { eg.querySelectorAll('button').forEach(function (c) { var on = c.dataset.v === eyeSel; c.style.background = on ? 'linear-gradient(135deg,var(--acc),var(--acc2))' : 'var(--bg)'; c.style.color = on ? '#0b1519' : 'var(--txt)'; c.style.borderColor = on ? 'transparent' : 'var(--line)'; }); }
+      paint();
       var l1 = document.createElement('div'); l1.className = 'dim'; l1.style.cssText = 'padding:4px 8px;font-size:13px'; l1.textContent = 'Dokununca çıkan yazı';
       var i1 = document.createElement('input'); i1.type = 'text'; i1.maxLength = 40; i1.value = cfg.tap;
       var l2 = document.createElement('div'); l2.className = 'dim'; l2.style.cssText = 'padding:10px 8px 4px;font-size:13px'; l2.textContent = 'Gözün üstünde kayan yazılar (her satır bir yazı)';
@@ -828,17 +843,18 @@ init();
       var sw = document.createElement('label'); sw.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 8px;font-size:15px'; sw.textContent = 'Kayan yazılar kendiliğinden çıksın';
       var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = cfg.on; cb.style.cssText = 'width:22px;height:22px;accent-color:var(--acc)'; sw.append(cb);
       var r = document.createElement('div'); r.className = 'mb';
-      var rs = document.createElement('button'); rs.textContent = 'Varsayılan'; rs.onclick = function () { i1.value = DEF.tap; ta.value = DEF.lines.join('\n'); cb.checked = true; };
+      var rs = document.createElement('button'); rs.textContent = 'Varsayılan'; rs.onclick = function () { i1.value = DEF.tap; ta.value = DEF.lines.join('\n'); cb.checked = true; eyeSel = 'random'; paint(); };
       var no = document.createElement('button'); no.textContent = 'Vazgeç'; no.onclick = function () { close(false); };
       var ok = document.createElement('button'); ok.className = 'primary'; ok.textContent = 'Kaydet';
       ok.onclick = async function () {
         cfg.tap = i1.value.trim() || DEF.tap;
         cfg.lines = ta.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 20);
-        cfg.on = cb.checked;
-        try { await ghost.invoke('set', { botTap: cfg.tap, botLines: cfg.lines.join('\n'), botTickerOff: !cfg.on }); } catch (e) {}
-        close(true); setTimeout(function () { ticker(cfg.tap, true); }, 400);
+        cfg.on = cb.checked; cfg.eye = eyeSel;
+        try { await ghost.invoke('set', { botTap: cfg.tap, botLines: cfg.lines.join('\n'), botTickerOff: !cfg.on, botEye: cfg.eye }); } catch (e) {}
+        applyEye();
+        close(true); if (cfg.eye !== 'yazi') setTimeout(function () { ticker(cfg.tap, true); }, 400);
       };
-      r.append(rs, no, ok); b.append(l1, i1, l2, ta, sw, r);
+      r.append(rs, no, ok); b.append(le, eg, l1, i1, l2, ta, sw, r);
     });
   };
 
