@@ -1522,6 +1522,7 @@ post({hello:1});
                 "diag-fetch" -> reply(true, crawler.diagFetchRun(args.optString(0)))
                 "diag-result" -> reply(true, crawler.diagResult())
                 "relay-status" -> reply(true, relay.status)
+                "relay-activity" -> reply(true, relay.lastCmd)
                 "crawl-github" -> reply(true, crawler.githubSync(args.optString(0)))
                 "clipboard-read" -> reply(true, try {
                     val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager

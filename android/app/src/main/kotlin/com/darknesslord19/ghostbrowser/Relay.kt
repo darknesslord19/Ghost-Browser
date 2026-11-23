@@ -26,6 +26,7 @@ interface RelayApi {
 
 class Relay(private val api: RelayApi) {
     @Volatile var status = "Kapalı"
+    @Volatile var lastCmd = 0L
         private set
     @Volatile private var started = false
     private var seq = 0
@@ -66,7 +67,9 @@ class Relay(private val api: RelayApi) {
                 if (code == 200) {
                     status = "Bağlı, komut çalışıyor"
                     val body = c.inputStream.bufferedReader().readText()
+                    lastCmd = System.currentTimeMillis()
                     val res = run(JSONObject(body))
+                    lastCmd = System.currentTimeMillis()
                     var sent = false
                     for (k in 0 until 3) {
                         try { post(p.first + "/device/" + p.second + "/result", res); sent = true; break } catch (_: Throwable) { nap(800) }

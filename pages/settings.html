@@ -715,9 +715,10 @@ init();
     var st = '';
     try { st = String(await ghost.invoke('relay-status')); } catch (e) {}
     var now = Date.now();
+    try { var la = Number(await ghost.invoke('relay-activity')) || 0; if (la && Math.abs(now - la) < 2500) hold = Math.max(hold, la + 2500); } catch (e) {}
     if (/komut çalışıyor/.test(st)) hold = now + 2500;
     bot.dataset.state = /^Bağlı/.test(st) ? (now < hold ? 'active' : 'idle') : (now < hold ? 'active' : 'off');
-    setTimeout(poll, 700);
+    setTimeout(poll, 500);
   }
   if (document.body.classList.contains('solo')) poll();
 })();
