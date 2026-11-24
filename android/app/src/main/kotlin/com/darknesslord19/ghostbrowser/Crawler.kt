@@ -683,6 +683,30 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         return false
     }
 
+    // ---- Plus: film adı, afiş ve içerik aynı sitenin film sayfasından okunur (selektör bekleyerek, Playwright tarzı) ----
+    private val SITE_JS = "(function(){function m(p){var e=document.querySelector('meta[property=\"'+p+'\"],meta[name=\"'+p+'\"]');return e?(e.content||'').trim():''}" +
+        "function ab(u){try{return u?new URL(u,location.href).href:''}catch(e){return u||''}}" +
+        "var h=document.querySelector('h1');var t=m('og:title')||(h?h.innerText:'')||document.title;" +
+        "var p=m('og:image')||m('twitter:image');if(!p){var i=document.querySelector('.poster img,.film-poster img,.afis img,.film-afis img,img[itemprop=image]');p=i?(i.getAttribute('data-src')||i.getAttribute('data-lazy-src')||i.src):''}" +
+        "var de=document.querySelector('[itemprop=description],.film-aciklama,.description,.summary,.wp-content p,.entry-content p');var d=m('og:description')||m('description')||(de?de.innerText:'');" +
+        "return JSON.stringify({t:(t||'').trim().slice(0,200),p:ab(p),d:(d||'').trim().slice(0,1200)})})()"
+
+    private fun readSite(f: JSONObject, g: Int, n: Int) {
+        if (!BuildConfig.PLUS_APP || f.has("site") || n > 5 || g != gen) return
+        evalJs(SITE_JS, g) { r ->
+            try {
+                val o = JSONObject(r ?: "{}")
+                if (o.optString("t").isNotEmpty() && o.optString("p").startsWith("http")) {
+                    f.put("site", o)
+                    schedule()
+                    return@evalJs
+                }
+            } catch (_: Exception) {
+            }
+            step(700L + n * 500L, g) { readSite(f, g, n + 1) }
+        }
+    }
+
     private fun runResolve(j: Job, g: Int, done: () -> Unit) {
         val cat = findCat(j.site, j.cat) ?: return done()
         val films = cat.optJSONArray("films") ?: return done()
@@ -757,6 +781,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 return
             }
             load(f.optString("url"), g) {
+                readSite(f, g, 0)
                 val t = tab
                 if (t == null) {
                     done()
@@ -1283,7 +1308,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 for (n in 0 until fs.length()) {
                     val f = fs.getJSONObject(n)
                     fl.put(JSONObject().put("title", f.optString("title")).put("url", f.optString("url")).put("poster", f.optString("poster"))
-                        .put("video", f.optString("video")).put("videoRef", f.optString("videoRef")).also { o -> f.optJSONObject("tmdb")?.let { o.put("tmdb", it) } })
+                        .put("video", f.optString("video")).put("videoRef", f.optString("videoRef")).also { o -> f.optJSONObject("tmdb")?.let { o.put("tmdb", it) }; f.optJSONObject("site")?.let { o.put("site", it) } })
                 }
                 cs.put(JSONObject().put("name", c.optString("name")).put("group", c.optString("group")).put("url", c.optString("url")).put("films", fl))
             }
@@ -1310,8 +1335,9 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 val v = f.optString("video")
                 if (v.isEmpty()) continue
                 val tm = f.optJSONObject("tmdb")
-                val title = (tm?.optString("title")?.ifEmpty { null } ?: cleanTitle(f.optString("title")).first).replace(Regex("[\\r\\n]+"), " ")
-                val logo = (tm?.optString("poster")?.takeIf { it.isNotEmpty() && !it.endsWith("/w342") } ?: f.optString("poster").ifEmpty { null } ?: NO_POSTER).replace("\"", "")
+                val si = if (BuildConfig.PLUS_APP) f.optJSONObject("site") else null
+                val title = (si?.optString("t")?.takeIf { it.isNotEmpty() }?.let { cleanTitle(it).first } ?: tm?.optString("title")?.ifEmpty { null } ?: cleanTitle(f.optString("title")).first).replace(Regex("[\\r\\n]+"), " ")
+                val logo = (si?.optString("p")?.takeIf { it.startsWith("http") } ?: tm?.optString("poster")?.takeIf { it.isNotEmpty() && !it.endsWith("/w342") } ?: f.optString("poster").ifEmpty { null } ?: NO_POSTER).replace("\"", "")
                 val g2 = if (f.has("series")) grp + " > " + f.optString("series").replace("\"", "'") else grp
                 val title2 = if (f.has("series")) f.optString("title") else title
                 sb.append("#EXTINF:-1 tvg-name=\"").append(title2.replace("\"", "'")).append("\" tvg-logo=\"").append(logo).append("\" group-title=\"").append(g2).append("\",").append(title2).append('\n')
@@ -1376,7 +1402,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     if (fu.isEmpty()) continue
                     val ex = idx[fu]
                     if (ex == null) {
-                        fl.put(JSONObject().put("title", f.optString("title")).put("url", fu).put("poster", f.optString("poster")).put("video", f.optString("video")).put("videoRef", f.optString("videoRef")).also { o -> f.optJSONObject("tmdb")?.let { o.put("tmdb", it) } })
+                        fl.put(JSONObject().put("title", f.optString("title")).put("url", fu).put("poster", f.optString("poster")).put("video", f.optString("video")).put("videoRef", f.optString("videoRef")).also { o -> f.optJSONObject("tmdb")?.let { o.put("tmdb", it) }; f.optJSONObject("site")?.let { o.put("site", it) } })
                         added++
                     } else if (ex.optString("video").isEmpty() && f.optString("video").isNotEmpty()) {
                         ex.put("video", f.optString("video")).put("videoRef", f.optString("videoRef"))
