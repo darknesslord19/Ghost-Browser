@@ -87,6 +87,8 @@
   .cat { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:var(--surface-2); border:1px solid transparent; cursor:pointer; }
   .cat.sel { border-color:var(--accent); background:#223038; }
   .cat.busy { border-color:var(--warn); }
+  .cat-main { flex:1; min-width:0; background:none; border:0; padding:0; text-align:left; color:inherit; }
+  .cat-main b, .cat-main small { overflow:hidden; text-overflow:ellipsis; }
   .cat b { display:block; font-size:15px; font-weight:600; }
   .cat small { display:block; margin-top:2px; font-size:12.5px; color:var(--muted); }
   .tag { margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
@@ -126,6 +128,14 @@
   .list-out { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
   .list-out li { display:flex; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:12px; background:var(--surface-2); font-size:14px; }
   .list-out li span { color:var(--muted); white-space:nowrap; }
+  .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .frow { display:flex; align-items:center; gap:10px; padding:8px; border-radius:12px; background:var(--surface-2); border:1px solid transparent; }
+  .frow.run { border-color:var(--accent); }
+  .frow img { width:36px; height:54px; border-radius:6px; object-fit:cover; background:var(--bg); flex:none; }
+  .frow b { display:block; font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .frow small { display:block; font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .frow .ok { color:var(--ok); } .frow .bad { color:var(--danger); } .frow .go { color:var(--accent); }
+  .frow > div { min-width:0; flex:1; }
   .toast { position:fixed; left:50%; bottom:96px; z-index:60; max-width:calc(100% - 32px); transform:translate(-50%,20px); opacity:0; pointer-events:none; padding:12px 16px; border-radius:12px; background:#f3ece6; color:#1b1411; font-size:14px; font-weight:600; transition:all .25s; }
   .toast.show { opacity:1; transform:translate(-50%,0); }
 </style>
@@ -150,7 +160,7 @@
 <div class="selbar" id="selbar">
   <div class="selbar-in">
     <div class="count"><span id="selCount">0 seçili</span><button type="button" data-act="clear-sel">Seçimi temizle</button></div>
-    <button class="btn" type="button" data-act="list-sel">Listele</button>
+    <button class="btn" type="button" data-act="scan-sel">Tara</button>
     <button class="btn primary" type="button" data-act="actions-sel">İşlemler</button>
   </div>
 </div>
@@ -176,7 +186,7 @@
   var toastT;
   function toast(m) { var t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('show'); }, 2600); }
   function openSheet(h) { $('#sheetIn').innerHTML = '<div class="grab"></div>' + h; $('#scrim').classList.add('show'); $('#sheet').classList.add('show'); $('#sheet').scrollTop = 0; }
-  function closeSheet() { $('#scrim').classList.remove('show'); $('#sheet').classList.remove('show'); }
+  function closeSheet() { st.detail = null; $('#scrim').classList.remove('show'); $('#sheet').classList.remove('show'); }
   function copy(t) { try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function () { return true; }, function () { return fb(t); }); } catch (e) {} return Promise.resolve(fb(t)); }
   function fb(t) { try { var a = document.createElement('textarea'); a.value = t; a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select(); var ok = document.execCommand('copy'); a.remove(); return ok; } catch (e) { return false; } }
 
@@ -220,7 +230,7 @@
         '<div class="scan-top">' + pill(s, run) + '<span class="pct">%' + pct + ' kategori tamam</span></div>' +
         '<div class="bar"><span style="width:' + pct + '%"></span></div>' +
         '<div class="btn-row">' +
-          '<button class="btn primary" type="button" data-act="scan" data-h="' + esc(s.host) + '">' + (x.d && x.d < s.cats.length ? 'Devam et' : x.d ? 'Yeniden tara' : 'Tara') + '</button>' +
+          '<button class="btn primary" type="button" data-act="scan" data-h="' + esc(s.host) + '">' + (selUrls(s.host).length ? 'Seçilenleri tara (' + selUrls(s.host).length + ')' : x.d && x.d < s.cats.length ? 'Devam et' : x.d ? 'Yeniden tara' : 'Tara') + '</button>' +
           '<button class="btn" type="button" data-act="check-new" data-h="' + esc(s.host) + '">Yenileri kontrol et</button></div>' +
         '<div class="field"><label class="label" for="rg-' + esc(s.host) + '">Taranacak sayfalar</label><select class="select" id="rg-' + esc(s.host) + '" data-range="' + esc(s.host) + '">' +
           [[3, 'İlk 3 sayfa'], [10, 'İlk 10 sayfa'], [30, 'İlk 30 sayfa'], [200, 'Tüm sayfalar']].map(function (o) { return '<option value="' + o[0] + '"' + (rg === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
@@ -254,9 +264,9 @@
       html += '<ul class="cat-list">' + part.map(function (c) {
         var on = !!sel[c.url], busy = st.runCat === c.url;
         var info = c.films ? c.films + ' film · ' + c.resolved + ' video' + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.failed ? ' · ⚠ ' + c.failed : '') : '';
-        return '<li><label class="cat' + (on ? ' sel' : '') + (busy ? ' busy' : '') + '"><span class="chk"><input type="checkbox" data-cat="' + esc(h) + '" value="' + esc(c.url) + '"' + (on ? ' checked' : '') + '><span></span></span>' +
-          '<span><b>' + esc((c.group ? c.group + ' › ' : '') + c.name) + '</b>' + (info ? '<small>' + esc(info) + '</small>' : '') + '</span>' +
-          '<span class="tag">' + (busy ? 'çalışıyor' : c.films ? (c.done ? '✓' : '') : 'taranmadı') + '</span></label></li>';
+        return '<li><div class="cat' + (on ? ' sel' : '') + (busy ? ' busy' : '') + '"><span class="chk"><input type="checkbox" data-cat="' + esc(h) + '" value="' + esc(c.url) + '"' + (on ? ' checked' : '') + '><span></span></span>' +
+          '<button type="button" class="cat-main" data-act="cat-open" data-h="' + esc(h) + '" data-u="' + esc(c.url) + '"><b>' + esc((c.group ? c.group + ' › ' : '') + c.name) + '</b>' + (info ? '<small>' + esc(info) + '</small>' : '') + '</button>' +
+          '<span class="tag">' + (busy ? 'çalışıyor' : c.films ? (c.done ? '✓' : '') : 'taranmadı') + '</span></div></li>';
       }).join('') + '</ul>';
       if (vis.length > lim) html += '<div class="more"><button class="btn block ghost" type="button" data-act="more" data-h="' + esc(h) + '">Daha fazla yükle (' + lim + ' / ' + vis.length + ')</button></div>';
     }
@@ -286,17 +296,18 @@
       var det = act && state.progTotal > 0 && (state.phase === 'resolve' || state.phase === 'list');
       $('#liveMsg').textContent = (state.status || '') + (state.enriching ? ' · TMDB: ' + state.enrichLeft + ' kaldı' : '');
       $('#liveBar').style.width = det ? Math.min(100, Math.round(state.prog / state.progTotal * 100)) + '%' : (act ? '15%' : '0%');
-      $('#liveSub').textContent = (state.phase === 'resolve' && state.cur ? '▶ ' + state.cur : '') + (state.queue ? '  ·  sırada ' + state.queue : '');
+      var cn = ''; st.sites.forEach(function (x) { x.cats.forEach(function (c) { if (c.url === state.cat) cn = c.name; }); });
+      $('#liveSub').textContent = (cn ? cn + ' · ' : '') + (state.phase === 'resolve' ? (state.cur ? '▶ ' + state.cur : 'video çözülüyor') : state.phase === 'list' ? 'film listeleniyor' : '') + (state.queue ? '  ·  sırada ' + state.queue : '');
       live.querySelector('[data-act="stop"]').style.display = act ? '' : 'none';
       return call('crawl-sites').then(function (sum) {
         var keep = st.sites; st.sites = sum;
         if (state.running) { st.busyHost = runningHost(state); st.runCat = state.cat || ''; }
         var sig = JSON.stringify(sum) + '|' + st.busyHost + '|' + st.runCat;
-        if (sig !== lastSig) { lastSig = sig; if (st.open === null && !keep.length && sum.length === 1) st.open = sum[0].host; render(); }
+        var ae = document.activeElement; if (sig !== lastSig && !(ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT') && ae.type !== 'checkbox')) { lastSig = sig; if (st.open === null && !keep.length && sum.length === 1) st.open = sum[0].host; render(); }
       });
     }).catch(function () {});
   }
-  setInterval(function () { if (!document.hidden) refresh(); }, 1500);
+  setInterval(function () { if (!document.hidden) { refresh(); refreshDetail(false); } }, 1500);
 
   /* ---- işlemler ---- */
   function scope(h, scoped) { var u = scoped ? selUrls(h) : []; return u.length ? u : site(h).cats.map(function (c) { return c.url; }); }
@@ -329,6 +340,49 @@
       '<div class="group"><span class="label">Yayınla</span>' +
         '<button class="row-btn" type="button" data-act="github" data-h="' + esc(h) + '"><span class="ico">⬆</span><span><b>GitHub\'a yükle</b><small>Güncel listeyi depoya gönderir</small></span></button></div>');
   }
+  function fstat(f, cur) {
+    if (f.url === cur) return ['go', '▶ çözülüyor…'];
+    if (f.video) { var v = String(f.video).replace(/^https?:\/\//, ''); return ['ok', '✓ ' + v.slice(0, 48)]; }
+    if ((f.tried || 0) >= 1) return ['bad', '✕ çözülemedi'];
+    return ['', 'sırada'];
+  }
+  function filmRows(fl, cur, lim) {
+    var out = fl.slice().sort(function (a, b) { return (a.url === cur ? -1 : 0) - (b.url === cur ? -1 : 0); }).slice(0, lim);
+    return out.map(function (f) {
+      var si = f.site || {}, t = si.t || f.title || '', p = si.p || f.poster || 'no-poster.jpg', x = fstat(f, cur);
+      return '<div class="frow' + (f.url === cur ? ' run' : '') + '"><img loading="lazy" src="' + esc(p) + '" onerror="this.src=\'no-poster.jpg\'" alt=""><div><b>' + esc(t) + '</b><small class="' + x[0] + '">' + esc(x[1]) + '</small></div></div>';
+    }).join('');
+  }
+  function detailBody(d, fl, state) {
+    var cur = state && state.running && state.phase === 'resolve' ? state.curUrl : '';
+    var n = fl.length, v = fl.filter(function (f) { return f.video; }).length, bad = fl.filter(function (f) { return !f.video && (f.tried || 0) >= 1 && f.url !== cur; }).length;
+    var hd = '<div class="scope">' + n + ' film · ' + v + ' video' + (bad ? ' · ⚠ ' + bad + ' çözülemedi' : '') + '</div>';
+    var rows = n ? filmRows(fl, cur, d.shown) : '<div class="empty">Bu kategori henüz taranmadı. "Burayı tara"ya bas.</div>';
+    var more = n > d.shown ? '<button class="btn block ghost" type="button" data-act="d-more">Daha fazla (' + (n - d.shown) + ')</button>' : '';
+    return { head: hd, list: rows + more, retry: bad };
+  }
+  async function catSheet(h, u) {
+    var s = site(h), c = s.cats.filter(function (y) { return y.url === u; })[0]; if (!c) return;
+    st.detail = { h: h, u: u, shown: 60, sig: '' };
+    openSheet('<div><h3>' + esc((c.group ? c.group + ' › ' : '') + c.name) + '</h3><div id="dHead"></div></div>' +
+      '<div class="fgrid"><button class="btn" type="button" data-act="cat-scan" data-h="' + esc(h) + '" data-u="' + esc(u) + '">Burayı tara</button>' +
+      '<button class="btn primary" type="button" data-act="cat-resolve" data-h="' + esc(h) + '" data-u="' + esc(u) + '">Videoları çöz</button></div>' +
+      '<button class="btn block" id="dRetry" type="button" data-act="cat-retry" data-h="' + esc(h) + '" data-u="' + esc(u) + '" style="display:none">Çözülemeyenleri tekrar dene</button>' +
+      '<div class="group" id="dList"></div>');
+    await refreshDetail(true);
+  }
+  async function refreshDetail(force) {
+    var d = st.detail; if (!d) return;
+    try {
+      var state = await call('crawl-state'), fl = await call('crawl-films', d.h, d.u);
+      if (!st.detail || st.detail !== d) return;
+      var b = detailBody(d, fl, state);
+      var sig = b.head + b.list.length + '|' + (state.curUrl || '') + '|' + fl.filter(function (f) { return f.video; }).length + '|' + fl.filter(function (f) { return (f.tried || 0) >= 1; }).length;
+      if (!force && sig === d.sig) return;
+      d.sig = sig;
+      $('#dHead').innerHTML = b.head; $('#dList').innerHTML = b.list; $('#dRetry').style.display = b.retry ? '' : 'none';
+    } catch (e) {}
+  }
   function menuSheet(h) {
     openSheet('<div><h3>' + esc(h) + '</h3></div><div class="group">' +
       '<button class="row-btn" type="button" data-act="add-cat" data-h="' + esc(h) + '"><span class="ico">+</span><span><b>Kategori ekle</b><small>Adresini girerek elle ekle</small></span></button>' +
@@ -344,13 +398,19 @@
         case 'toggle': st.open = st.open === h ? null : h; render(); break;
         case 'classic': call('open', 'ghost://settings?only=crawler#crawler'); break;
         case 'stop': await call('crawl-stop'); toast('Durduruldu'); refresh(); break;
-        case 'scan': {
-          var s = site(h), x = stats(s), urls;
-          if (x.d && x.d < s.cats.length) urls = s.cats.filter(function (c) { return !c.done; }).map(function (c) { return c.url; });
-          else urls = s.cats.map(function (c) { return c.url; });
+        case 'scan': case 'scan-sel': {
+          var hh = a === 'scan-sel' ? st.open : h, s0 = site(hh), x = stats(s0), urls = selUrls(hh);
+          if (!urls.length) {
+            if (x.d && x.d < s0.cats.length) urls = s0.cats.filter(function (c) { return !c.done; }).map(function (c) { return c.url; });
+            else urls = s0.cats.map(function (c) { return c.url; });
+          }
           if (!urls.length) { toast('Önce kategori ekle'); break; }
-          if (await runList(h, urls, st.resolve[h])) toast(urls.length + ' kategori sıraya alındı'); refresh(); break;
+          if (await runList(hh, urls, st.resolve[hh])) toast(urls.length + ' kategori listelenecek' + (st.resolve[hh] ? ', sonra videolar çözülecek' : '')); refresh(); break;
         }
+        case 'cat-open': catSheet(h, b.dataset.u); break;
+        case 'cat-scan': { var rl = await call('crawl-list', h, [b.dataset.u], pages(h)); if (rl) toast(rl); else { toast('Listeleniyor'); if (st.resolve[h]) await call('crawl-resolve', h, [b.dataset.u], 100000); } refresh(); break; }
+        case 'cat-resolve': { var rv = await call('crawl-resolve', h, [b.dataset.u], 100000); toast(rv || 'Çözme başladı'); refresh(); break; }
+        case 'cat-retry': { await doRetry(h, [b.dataset.u]); break; }
         case 'check-new': {
           var d = site(h).cats.filter(function (c) { return c.done; }).map(function (c) { return c.url; });
           if (!d.length) { toast('Önce bir kategoriyi tamamen tara'); break; }
@@ -388,6 +448,7 @@
         }
         case 'github': closeSheet(); toast('Yükleniyor…'); toast(await call('crawl-github', h) || 'Tamam'); refresh(); break;
         case 'close': closeSheet(); break;
+        case 'd-more': if (st.detail) { st.detail.shown += 60; st.detail.sig = ''; refreshDetail(true); } break;
         case 'add-site':
           openSheet('<div><h3>Site ekle</h3><p class="scope">Sitenin adresini yaz; kategoriler otomatik bulunur.</p></div><input class="text-input" id="newSite" type="url" placeholder="ornek.com" aria-label="Site adresi"><div class="two"><button class="btn" type="button" data-act="close">Vazgeç</button><button class="btn primary" type="button" data-act="save-site">Bul</button></div>'); break;
         case 'save-site': {
