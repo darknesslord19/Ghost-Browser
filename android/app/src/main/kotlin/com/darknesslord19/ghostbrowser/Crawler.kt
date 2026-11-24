@@ -899,6 +899,10 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             if (idx >= todo.size) return done()
             val f = todo[idx++]
             prog = idx
+            if (f.optString("video").isNotEmpty()) {
+                step(0, g) { nextFilm() }
+                return
+            }
             curTitle = f.optString("title")
             curUrl = f.optString("url")
             status = prefix() + "Video çözülüyor " + idx + "/" + todo.size
@@ -1071,6 +1075,39 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     pollRef = { poll() }
                     poll()
                 }
+            }
+        }
+        // Plus / FullHD: önce 4 iş parçacığıyla düz HTTP ile paralel çöz; olmayanlar sırayla eski yolla denenir
+        if (BuildConfig.PLUS_APP && j.site.contains("fullhdfilmizlesene")) {
+            val batch = todo.filter { !isSeries(it.optString("url")) && !it.optBoolean("fastTried") && it.optString("video").isEmpty() }
+            if (batch.isNotEmpty()) {
+                val total = batch.size
+                val cnt = java.util.concurrent.atomic.AtomicInteger(0)
+                status = prefix() + "Hızlı çözülüyor 0/" + total
+                val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
+                for (f in batch) pool.execute {
+                    if (g != gen || !running) return@execute
+                    f.put("fastTried", true)
+                    val err = try { fastResolve(f) } catch (e: Exception) { "hata: " + e.javaClass.simpleName }
+                    val n = cnt.incrementAndGet()
+                    main.post {
+                        if (g != gen || !running) return@post
+                        if (err.isEmpty()) noteRes(f.optString("url"), f.optString("video"), 1)
+                        else cat.put("log", (cat.optString("log") + "\nhızlı çözme olmadı (" + err + "): " + f.optString("url").takeLast(40)).takeLast(3000))
+                        prog = n
+                        curTitle = f.optString("title")
+                        curUrl = f.optString("url")
+                        status = prefix() + "Hızlı çözülüyor " + n + "/" + total
+                        schedule()
+                        if (n >= total) {
+                            idx = 0
+                            prog = 0
+                            nextFilm()
+                        }
+                    }
+                }
+                pool.shutdown()
+                return
             }
         }
         nextFilm()
