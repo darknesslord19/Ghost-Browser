@@ -424,7 +424,13 @@
     log('   dış adresler (' + ca.length + '):'); ca.slice(0, 8).forEach(function (u) { log('     ' + u.slice(0, 110)); });
     log('   atob/base64: ' + (/atob\(/.test(html) ? 'var' : 'yok') + ' · "rapid" geçiyor: ' + (/rapid/i.test(html) ? 'evet' : 'hayır'));
     var ai = html.indexOf('atob(');
-    if (ai >= 0) log('   atob çevresi: ' + html.slice(Math.max(0, ai - 120), ai + 160).replace(/\s+/g, ' '));
+    if (ai >= 0) {
+      var fs0 = html.lastIndexOf('(function(kv,sv', ai); if (fs0 < 0) fs0 = Math.max(0, ai - 200);
+      log('   KOD: ' + html.slice(fs0, fs0 + 2600).replace(/\s+/g, ' '));
+    }
+    var v2 = html.match(/["']v2\.[A-Za-z0-9_\-]{20,}["']/g) || [];
+    log('   v2 veri (' + v2.length + '): ' + v2.slice(0, 3).map(function (t) { return t.slice(0, 90); }).join(' | '));
+    var kvm = html.match(/\}\)\(([^;]{0,400})\);/); if (kvm) log('   ÇAĞRI: ' + kvm[1].slice(0, 400));
     var dec = [], b64 = /["']([A-Za-z0-9+\/]{24,}={0,2})["']/g, bm;
     while ((bm = b64.exec(html)) && dec.length < 12) { try { var t = atob(bm[1]); try { t = decodeURIComponent(escape(t)); } catch (e2) {} if (/https?:\/\/|<iframe|\.m3u8|\.mp4/i.test(t)) dec.push(t); } catch (e) {} }
     log('   çözülen base64 (' + dec.length + '):'); dec.slice(0, 5).forEach(function (t) { log('     ' + t.replace(/\s+/g, ' ').slice(0, 200)); });
