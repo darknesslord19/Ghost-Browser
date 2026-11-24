@@ -269,7 +269,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         for (k in 0 until fl.length()) {
             val f = fl.getJSONObject(k)
             if (f.optString("url") == url) {
-                f.put("video", "").put("videoRef", "").put("tried", 0).put("retry", 1)
+                f.put("video", "").put("videoRef", "").put("tried", 0).put("retry", 1).remove("fastTried")
                 schedule()
                 return true
             }
@@ -707,6 +707,73 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         }
     }
 
+    // ---- Plus / FullHDFilmizlesene: tarayıcı açmadan, düz HTTP ile video adresini çıkarır ----
+    private fun httpGet(u: String, ref: String, max: Int): String {
+        val c = URL(u).openConnection() as HttpURLConnection
+        c.connectTimeout = 12000
+        c.readTimeout = 15000
+        c.instanceFollowRedirects = true
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36")
+        if (ref.isNotEmpty()) c.setRequestProperty("Referer", ref)
+        try { val ck = android.webkit.CookieManager.getInstance().getCookie(u); if (!ck.isNullOrEmpty()) c.setRequestProperty("Cookie", ck) } catch (_: Exception) {}
+        if (c.responseCode >= 400) throw Exception("HTTP " + c.responseCode)
+        val b = c.inputStream.use { it.readBytes() }
+        return String(b, 0, minOf(b.size, max), Charsets.UTF_8)
+    }
+
+    private fun b64(s0: String): ByteArray {
+        var s = s0.replace('-', '+').replace('_', '/')
+        s += "=".repeat((4 - s.length % 4) % 4)
+        return android.util.Base64.decode(s, android.util.Base64.DEFAULT)
+    }
+
+    private fun rot13(s: String): String = s.map { ch ->
+        when (ch) {
+            in 'a'..'z' -> 'a' + (ch - 'a' + 13) % 26
+            in 'A'..'Z' -> 'A' + (ch - 'A' + 13) % 26
+            else -> ch
+        }
+    }.joinToString("")
+
+    private fun avDecode(e: String): String {
+        val t = String(b64(e.reversed()), Charsets.ISO_8859_1)
+        val sb = StringBuilder()
+        val key = "K9L"
+        for (i in t.indices) sb.append((t[i].code - (key[i % 3].code % 5 + 1)).toChar())
+        return String(b64(sb.toString()), Charsets.UTF_8)
+    }
+
+    private fun meta(html: String, re: Regex): String = re.find(html)?.groupValues?.get(1)?.replace("&amp;", "&")?.trim() ?: ""
+
+    /** Başarılıysa "" döner; aksi halde nedeni. */
+    private fun fastResolve(f: JSONObject): String {
+        val fu = f.optString("url")
+        val html = httpGet(fu, "", 700000)
+        if (BuildConfig.PLUS_APP && !f.has("site")) {
+            val t = meta(html, Regex("property=[\"']og:title[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
+            val p = meta(html, Regex("property=[\"']og:image[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
+            val d = meta(html, Regex("(?:name=[\"']description[\"']|property=[\"']og:description[\"'])[^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
+            if (t.isNotEmpty() && p.startsWith("http")) f.put("site", JSONObject().put("t", t.take(200)).put("p", p).put("d", d.take(1200)))
+        }
+        val sx = Regex("\"sx\":\\{[^}]*\"t\":\\[([^\\]]*)\\]").find(html)?.groupValues?.get(1) ?: return "oynatıcı verisi yok"
+        var player = ""
+        for (m in Regex("\"([^\"]+)\"").findAll(sx)) {
+            val d = try { String(b64(rot13(m.groupValues[1])), Charsets.UTF_8) } catch (_: Exception) { "" }
+            if (d.startsWith("http")) { player = d; break }
+        }
+        if (player.isEmpty()) return "oynatıcı adresi çözülemedi"
+        val ph = httpGet(player, fu, 900000)
+        val enc = Regex("\"file\":\\s*av\\('([^']*)'\\)").find(ph)?.groupValues?.get(1) ?: return "av girdisi yok"
+        val video = avDecode(enc)
+        if (!video.startsWith("http")) return "video adresi çözülemedi"
+        val pu = URI(player)
+        val ref = pu.scheme + "://" + pu.host + "/"
+        val head = httpGet(video, ref, 2048)
+        if (!head.trimStart().startsWith("#EXTM3U")) return "akış doğrulanamadı"
+        f.put("video", video).put("videoRef", ref).put("videoTime", System.currentTimeMillis()).put("tried", 0)
+        return ""
+    }
+
     private fun runResolve(j: Job, g: Int, done: () -> Unit) {
         val cat = findCat(j.site, j.cat) ?: return done()
         val films = cat.optJSONArray("films") ?: return done()
@@ -778,6 +845,25 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                         }
                     }
                 }
+                return
+            }
+            if (BuildConfig.PLUS_APP && f.optString("url").contains("fullhdfilmizlesene") && !f.optBoolean("fastTried")) {
+                f.put("fastTried", true)
+                Thread {
+                    val err = try { fastResolve(f) } catch (e: Exception) { "hata: " + e.javaClass.simpleName }
+                    main.post {
+                        if (g != gen || !running) return@post
+                        if (err.isEmpty()) {
+                            noteRes(f.optString("url"), f.optString("video"), 1)
+                            schedule()
+                            step(60, g) { nextFilm() }
+                        } else {
+                            cat.put("log", (cat.optString("log") + "\nhızlı çözme olmadı (" + err + "): " + f.optString("url").takeLast(40)).takeLast(3000))
+                            idx--
+                            nextFilm()
+                        }
+                    }
+                }.start()
                 return
             }
             load(f.optString("url"), g) {
