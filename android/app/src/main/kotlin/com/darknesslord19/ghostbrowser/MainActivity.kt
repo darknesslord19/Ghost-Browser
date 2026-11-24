@@ -276,7 +276,7 @@ post({hello:1});
 
         sitesJson = computeSitesJson()
         val start = intent?.data?.toString()
-        newTab(start ?: if (BuildConfig.CRAWLER_APP) "ghost://settings?only=crawler#crawler" else store.str("homepage"))
+        newTab(start ?: if (BuildConfig.PLUS_APP) "ghost://yonetici" else if (BuildConfig.CRAWLER_APP) "ghost://settings?only=crawler#crawler" else store.str("homepage"))
         startRemote()
         refreshSites()
         exec.execute { adblock.refreshFilter(store.str("filterListUrl"), false) }
@@ -581,7 +581,7 @@ post({hello:1});
     private fun mapGhost(s: String): String {
         val rest = s.removePrefix("ghost://")
         val name = rest.takeWhile { it != '/' && it != '?' && it != '#' }
-        if (name != "newtab" && name != "settings" && name != "player") return ASSET + "newtab.html"
+        if (name != "newtab" && name != "settings" && name != "player" && name != "yonetici") return ASSET + "newtab.html"
         val tail = rest.substring(name.length).removePrefix("/")
         return "$ASSET$name.html$tail"
     }

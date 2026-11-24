@@ -54,6 +54,7 @@ jobs:
           }
           sign android/app/build/outputs/apk/browser/release/app-browser-release-unsigned.apk Ghost-Browser.apk b
           sign android/app/build/outputs/apk/crawler/release/app-crawler-release-unsigned.apk Ghost-Tarayici.apk c
+          sign android/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk Ghost-Tarayici-Plus.apk p
           ls -la *.apk
 
       - uses: actions/upload-artifact@v4
@@ -62,6 +63,7 @@ jobs:
           path: |
             Ghost-Browser.apk
             Ghost-Tarayici.apk
+            Ghost-Tarayici-Plus.apk
 
       - name: Release (android-latest)
         uses: softprops/action-gh-release@v2
@@ -75,3 +77,4 @@ jobs:
           files: |
             Ghost-Browser.apk
             Ghost-Tarayici.apk
+            Ghost-Tarayici-Plus.apk

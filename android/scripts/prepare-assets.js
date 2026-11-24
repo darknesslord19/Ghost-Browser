@@ -9,7 +9,7 @@ fs.mkdirSync(path.join(out, 'vendor'), { recursive: true });
 const read = (...p) => fs.readFileSync(path.join(root, ...p), 'utf8');
 const write = (name, data) => fs.writeFileSync(path.join(out, name), data);
 
-for (const f of ['newtab', 'settings', 'player']) {
+for (const f of ['newtab', 'settings', 'player', 'yonetici']) {
   let html = read('pages', f + '.html').replace(/ghost:\/\/static\//g, '');
   if (!html.includes('<head>')) throw new Error(f + ': <head> bulunamadı');
   html = html.replace('<head>', '<head><script src="qr-browser.js"></script><script src="android-shim.js"></script>');

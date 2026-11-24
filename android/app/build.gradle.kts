@@ -21,12 +21,21 @@ android {
             dimension = "app"
             manifestPlaceholders["appLabel"] = "Ghost Browser"
             buildConfigField("boolean", "CRAWLER_APP", "false")
+            buildConfigField("boolean", "PLUS_APP", "false")
         }
         create("crawler") {
             dimension = "app"
             applicationId = "com.darknesslord19.ghostcrawler"
             manifestPlaceholders["appLabel"] = "Ghost Tarayıcı"
             buildConfigField("boolean", "CRAWLER_APP", "true")
+            buildConfigField("boolean", "PLUS_APP", "false")
+        }
+        create("plus") {
+            dimension = "app"
+            applicationId = "com.darknesslord19.ghostcrawlerplus"
+            manifestPlaceholders["appLabel"] = "Ghost Tarayıcı Plus"
+            buildConfigField("boolean", "CRAWLER_APP", "true")
+            buildConfigField("boolean", "PLUS_APP", "true")
         }
     }
     buildTypes {
