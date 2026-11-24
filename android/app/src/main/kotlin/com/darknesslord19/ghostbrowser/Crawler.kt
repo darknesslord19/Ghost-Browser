@@ -627,6 +627,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     private fun isSeries(u: String): Boolean = Regex("^https?://[^/]+/(series|dizi|diziler|show|tv-series)/", RegexOption.IGNORE_CASE).containsMatchIn(u)
 
 
+    private val NO_POSTER = "https://raw.githubusercontent.com/darknesslord19/Ghost-Browser/main/pages/no-poster.jpg"
     private val HD_ID = Regex("-([A-Za-z0-9_]{8,14})\\.mp4")
 
     private fun hdId(video: String): String {
@@ -1162,7 +1163,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             .put("title", r.optString("title").ifEmpty { r.optString("name") })
             .put("orig", r.optString("original_title").ifEmpty { r.optString("original_name") })
             .put("year", d.take(4))
-            .put("poster", img + "w342" + r.optString("poster_path"))
+            .put("poster", if (r.optString("poster_path").isNotEmpty() && r.optString("poster_path") != "null") img + "w342" + r.optString("poster_path") else "")
             .put("backdrop", if (r.optString("backdrop_path").isNotEmpty() && r.optString("backdrop_path") != "null") img + "w780" + r.optString("backdrop_path") else "")
             .put("rating", Math.round(r.optDouble("vote_average", 0.0) * 10) / 10.0)
             .put("overview", r.optString("overview"))
@@ -1310,7 +1311,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                 if (v.isEmpty()) continue
                 val tm = f.optJSONObject("tmdb")
                 val title = (tm?.optString("title")?.ifEmpty { null } ?: cleanTitle(f.optString("title")).first).replace(Regex("[\\r\\n]+"), " ")
-                val logo = (tm?.optString("poster")?.ifEmpty { null } ?: f.optString("poster")).replace("\"", "")
+                val logo = (tm?.optString("poster")?.takeIf { it.isNotEmpty() && !it.endsWith("/w342") } ?: f.optString("poster").ifEmpty { null } ?: NO_POSTER).replace("\"", "")
                 val g2 = if (f.has("series")) grp + " > " + f.optString("series").replace("\"", "'") else grp
                 val title2 = if (f.has("series")) f.optString("title") else title
                 sb.append("#EXTINF:-1 tvg-name=\"").append(title2.replace("\"", "'")).append("\" tvg-logo=\"").append(logo).append("\" group-title=\"").append(g2).append("\",").append(title2).append('\n')
