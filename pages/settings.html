@@ -765,7 +765,7 @@ init();
 (function () {
   var bot = document.getElementById('gbot'), eyes = document.getElementById('gbEyes'), tkin = document.getElementById('gbTk'), visor = bot.querySelector('.visor'), hold = 0, ticking = false;
   var DEF = { tap: 'Dokunma Hızır', lines: ['Cloude bağlı ✓', 'Merhaba!', 'Ghost hazır', 'Komut bekliyorum…', 'Hızır emrinde'] };
-  var cfg = { tap: DEF.tap, lines: DEF.lines.slice(), on: true, eye: 'random' }, fixed = '';
+  var cfg = { tap: DEF.tap, lines: DEF.lines.slice(), on: true, eye: 'random', status: true }, fixed = '';
   window.gbBotCfg = cfg;
   async function loadCfg() {
     try {
@@ -774,6 +774,7 @@ init();
       if (st.botLines !== undefined && st.botLines !== '') cfg.lines = String(st.botLines).split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
       cfg.on = !st.botTickerOff;
       cfg.eye = st.botEye || 'random';
+      cfg.status = !st.botStatusOff;
       applyEye();
     } catch (e) {}
   }
@@ -842,31 +843,54 @@ init();
       var ta = document.createElement('textarea'); ta.maxLength = 600; ta.style.cssText = 'width:100%;min-height:130px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--txt);padding:10px;font:16px system-ui,sans-serif'; ta.value = cfg.lines.join('\n');
       var sw = document.createElement('label'); sw.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 8px;font-size:15px'; sw.textContent = 'Kayan yazılar kendiliğinden çıksın';
       var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = cfg.on; cb.style.cssText = 'width:22px;height:22px;accent-color:var(--acc)'; sw.append(cb);
+      var sw2 = document.createElement('label'); sw2.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:4px 8px 12px;font-size:15px'; sw2.textContent = 'İşlem yazıları (ne yaptığını yazsın)';
+      var cb2 = document.createElement('input'); cb2.type = 'checkbox'; cb2.checked = cfg.status; cb2.style.cssText = 'width:22px;height:22px;accent-color:var(--acc)'; sw2.append(cb2);
       var r = document.createElement('div'); r.className = 'mb';
-      var rs = document.createElement('button'); rs.textContent = 'Varsayılan'; rs.onclick = function () { i1.value = DEF.tap; ta.value = DEF.lines.join('\n'); cb.checked = true; eyeSel = 'random'; paint(); };
+      var rs = document.createElement('button'); rs.textContent = 'Varsayılan'; rs.onclick = function () { i1.value = DEF.tap; ta.value = DEF.lines.join('\n'); cb.checked = true; cb2.checked = true; eyeSel = 'random'; paint(); };
       var no = document.createElement('button'); no.textContent = 'Vazgeç'; no.onclick = function () { close(false); };
       var ok = document.createElement('button'); ok.className = 'primary'; ok.textContent = 'Kaydet';
       ok.onclick = async function () {
         cfg.tap = i1.value.trim() || DEF.tap;
         cfg.lines = ta.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 20);
-        cfg.on = cb.checked; cfg.eye = eyeSel;
-        try { await ghost.invoke('set', { botTap: cfg.tap, botLines: cfg.lines.join('\n'), botTickerOff: !cfg.on, botEye: cfg.eye }); } catch (e) {}
+        cfg.on = cb.checked; cfg.status = cb2.checked; cfg.eye = eyeSel;
+        try { await ghost.invoke('set', { botTap: cfg.tap, botLines: cfg.lines.join('\n'), botTickerOff: !cfg.on, botEye: cfg.eye, botStatusOff: !cfg.status }); } catch (e) {}
         applyEye();
         close(true); if (cfg.eye !== 'yazi') setTimeout(function () { ticker(cfg.tap, true); }, 400);
       };
-      r.append(rs, no, ok); b.append(le, eg, l1, i1, l2, ta, sw, r);
+      r.append(rs, no, ok); b.append(le, eg, l1, i1, l2, ta, sw, sw2, r);
     });
   };
 
+  var crawlRun = false, crawlTxt = '', lastTxt = '', lastShow = 0, lastCrawlPoll = 0;
+  function describe(o) {
+    var t = (o.cur || '').replace(/\s+/g, ' ').trim().slice(0, 40), ph = o.phase || '';
+    if (/resolve/i.test(ph)) return t ? 'Filmi çözüyorum: ' + t : 'Videoları çözüyorum';
+    if (/list|scan|crawl|tara/i.test(ph)) return 'Kategoriyi tarıyorum' + (o.cat ? ': ' + String(o.cat).replace(/^https?:\/\/[^/]+/, '').slice(0, 24) : '');
+    if (/discover/i.test(ph)) return 'Sitenin kategorilerini buluyorum';
+    if (/enrich/i.test(ph) || o.enriching) return 'Afişleri ve bilgileri alıyorum';
+    return String(o.status || 'Çalışıyorum').replace(/^\(\d+\/\d+\)\s*/, '').slice(0, 44);
+  }
+  async function pollCrawl() {
+    try {
+      var o = await ghost.invoke('crawl-state'); if (typeof o === 'string') o = JSON.parse(o);
+      crawlRun = !!(o && (o.running || o.enriching));
+      crawlTxt = crawlRun ? describe(o) : '';
+    } catch (e) {}
+  }
   async function poll() {
     var st = '';
     try { st = String(await ghost.invoke('relay-status')); } catch (e) {}
     var now = Date.now();
     try { var la = Number(await ghost.invoke('relay-activity')) || 0; if (la && Math.abs(now - la) < 2500) hold = Math.max(hold, la + 2500); } catch (e) {}
     if (/komut çalışıyor/.test(st)) hold = now + 2500;
-    bot.dataset.state = /^Bağlı/.test(st) ? (now < hold ? 'active' : 'idle') : (now < hold ? 'active' : 'off');
+    if (now - lastCrawlPoll > 1400) { lastCrawlPoll = now; await pollCrawl(); }
+    var busy = now < hold || crawlRun;
+    bot.dataset.state = busy ? 'active' : (/^Bağlı/.test(st) ? 'idle' : 'off');
+    if (crawlRun && cfg.status && crawlTxt && !ticking && eyeNotText() && (crawlTxt !== lastTxt || now - lastShow > 14000)) { lastTxt = crawlTxt; lastShow = now; ticker(crawlTxt, false); }
+    if (!crawlRun) lastTxt = '';
     setTimeout(poll, 500);
   }
+  function eyeNotText() { return true; }
   if (document.body.classList.contains('solo')) { loadCfg(); poll(); }
 })();
 </script></body></html>

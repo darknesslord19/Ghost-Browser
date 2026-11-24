@@ -77,7 +77,7 @@ class Store(ctx: Context, isTv: Boolean) {
                 "themeBar", "themeAcc", "themeBg", "themeBg3", "themeLine", "themeTxt", "themeDim" -> if (Regex("#[0-9a-fA-F]{6}").matches(p.optString(k))) settings.put(k, p.optString(k))
                 "tmdbKey" -> settings.put(k, p.optString(k).trim().take(400))
                 "githubRepo", "githubToken", "githubPath", "githubBranch", "relayLink" -> settings.put(k, p.optString(k).trim().take(300))
-                "githubAuto", "diag", "slowResolve", "botTickerOff" -> settings.put(k, p.optBoolean(k))
+                "githubAuto", "diag", "slowResolve", "botTickerOff", "botStatusOff" -> settings.put(k, p.optBoolean(k))
                 "botEye" -> settings.put(k, p.optString(k).take(20))
                 "botTap" -> settings.put(k, p.optString(k).trim().take(40))
                 "botLines" -> settings.put(k, p.optString(k).take(700))
