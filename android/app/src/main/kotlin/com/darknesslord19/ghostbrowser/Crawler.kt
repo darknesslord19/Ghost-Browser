@@ -242,6 +242,52 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         return ""
     }
 
+    /** Bekleyen (henüz başlamamış) işleri siler; çalışan iş sürer. */
+    fun clearQueue(): Int {
+        val n = jobs.size
+        jobs.clear()
+        totalJobs = 1
+        return n
+    }
+
+    @Volatile var infoLeft = 0
+
+    /** Plus: film sayfalarından ad, afiş ve açıklamayı düz HTTP ile, 4 iş parçacığıyla çeker. */
+    fun siteInfo(h: String, urls: JSONArray): Int {
+        if (!BuildConfig.PLUS_APP || infoLeft > 0) return 0
+        val site = sites.optJSONObject(h) ?: return 0
+        val want = HashSet<String>()
+        for (i in 0 until urls.length()) want.add(urls.getString(i))
+        val todo = ArrayList<JSONObject>()
+        val ca = cats(site)
+        for (i in 0 until ca.length()) {
+            val c = ca.getJSONObject(i)
+            if (want.isNotEmpty() && !want.contains(c.optString("url"))) continue
+            val fl = c.optJSONArray("films") ?: continue
+            for (k in 0 until fl.length()) {
+                val f = fl.getJSONObject(k)
+                if (!f.has("site") && f.optInt("siteTried") == 0 && !f.has("series")) todo.add(f)
+            }
+        }
+        if (todo.isEmpty()) return 0
+        infoLeft = todo.size
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
+        for (f in todo) pool.execute {
+            try {
+                applySite(f, httpGet(f.optString("url"), "", 700000))
+                if (!f.has("site")) f.put("siteTried", 1)
+            } catch (_: Exception) {
+                f.put("siteTried", 1)
+            }
+            main.post {
+                infoLeft = maxOf(0, infoLeft - 1)
+                schedule()
+            }
+        }
+        pool.shutdown()
+        return todo.size
+    }
+
     fun list(h: String, urls: JSONArray, maxPages: Int): String = queue("list", h, urls, maxPages.coerceIn(1, 5000))
 
     /** Çözülemeyen (denenmiş, videosu yok) filmleri yeniden denenebilir hale getirir. films boşsa kategorideki hepsi. */
@@ -386,6 +432,12 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             return added
         }
 
+        fun pageTpl(nx: String): String {
+            val m = Regex("^(.*?)(/page/|/sayfa/|[?&]page=|[?&]sayfa=|[?&]p=|/)(\\d+)(/?)((?:[?].*)?)$").find(nx.substringBefore('#')) ?: return ""
+            if (m.groupValues[3] != "2") return ""
+            return m.groupValues[1] + m.groupValues[2] + "{n}" + m.groupValues[4] + m.groupValues[5]
+        }
+
         fun fetchLoop(p: Int) {
             val cc = cat ?: return done()
             val total = cc.optInt("totalPages")
@@ -458,7 +510,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                     if (enough || rounds >= maxRounds) {
                         log("scroll rounds=$rounds cards=$cnt best=$best v=" + BuildConfig.VERSION_NAME)
                         evalJs(LIST_JS, g) { x -> process(if (cnt == 0 && snap != null) snap else x) }
-                    } else step(700, g) { tick() }
+                    } else step(if (BuildConfig.PLUS_APP) 400 else 700, g) { tick() }
                 }
             }
             status = label()
@@ -559,8 +611,32 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             status = label()
             if (next.isNotEmpty() && !visited.contains(next) && added > 0) {
                 if (pages >= j.n) return finish(false, next)
-                url = next
-                step(700, g) { page() }
+                val tp = if (BuildConfig.PLUS_APP && pages == 1 && cc.optString("tpl").isEmpty()) pageTpl(next) else ""
+                val nx = next
+                val normalNext = {
+                    url = nx
+                    step(700, g) { page() }
+                }
+                if (tp.isNotEmpty()) {
+                    // Plus: sonraki sayfaları tarayıcıda açmadan, sayfa içinden hızlıca çek (olmazsa eski yol)
+                    fetchPage(tp, 2, g) { arr ->
+                        val a2 = if (arr != null && arr.length() > 0) addFilms(arr) else 0
+                        if (a2 > 0) {
+                            pages++
+                            cc.put("pages", cc.optInt("pages") + 1)
+                            cc.put("tpl", tp)
+                            cc.put("apage", 2)
+                            log("hızlı sayfalama: $tp p2 films=" + films.length() + " added=$a2")
+                            schedule()
+                            if (pages >= j.n) finish(false, "") else step(120, g) { fetchLoop(3) }
+                        } else {
+                            log("hızlı sayfalama olmadı, eski yol")
+                            normalNext()
+                        }
+                    }
+                    return
+                }
+                normalNext()
             } else if (next.isEmpty() && nc && (added > 0 || rewound || pages == 1) && clicks < 800) {
                 if (pages >= j.n) return finish(false, "")
                 clicks++
@@ -745,16 +821,18 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
     private fun meta(html: String, re: Regex): String = re.find(html)?.groupValues?.get(1)?.replace("&amp;", "&")?.trim() ?: ""
 
+    private fun applySite(f: JSONObject, html: String) {
+        val t = meta(html, Regex("property=[\"']og:title[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
+        val p = meta(html, Regex("property=[\"']og:image[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
+        val d = meta(html, Regex("(?:name=[\"']description[\"']|property=[\"']og:description[\"'])[^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
+        if (t.isNotEmpty() && p.startsWith("http")) f.put("site", JSONObject().put("t", t.take(200)).put("p", p).put("d", d.take(1200)))
+    }
+
     /** Başarılıysa "" döner; aksi halde nedeni. */
     private fun fastResolve(f: JSONObject): String {
         val fu = f.optString("url")
         val html = httpGet(fu, "", 700000)
-        if (BuildConfig.PLUS_APP && !f.has("site")) {
-            val t = meta(html, Regex("property=[\"']og:title[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
-            val p = meta(html, Regex("property=[\"']og:image[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
-            val d = meta(html, Regex("(?:name=[\"']description[\"']|property=[\"']og:description[\"'])[^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
-            if (t.isNotEmpty() && p.startsWith("http")) f.put("site", JSONObject().put("t", t.take(200)).put("p", p).put("d", d.take(1200)))
-        }
+        if (BuildConfig.PLUS_APP && !f.has("site")) applySite(f, html)
         val sx = Regex("\"sx\":\\{[^}]*\"t\":\\[([^\\]]*)\\]").find(html)?.groupValues?.get(1) ?: return "oynatıcı verisi yok"
         var player = ""
         for (m in Regex("\"([^\"]+)\"").findAll(sx)) {
@@ -1340,7 +1418,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
-        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("gh", ghStatus).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size)
+        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("gh", ghStatus).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size).put("infoLeft", infoLeft)
 
     fun summary(only: String = ""): JSONArray {
         val out = JSONArray()

@@ -8,6 +8,7 @@
   :root { --bg:#15110f; --surface:#1e1815; --surface-2:#281f1b; --line:#3a2f29; --text:#f3ece6; --muted:#a39488; --accent:#5cc4de; --accent-ink:#06222b; --ok:#5fd39a; --warn:#f2b84b; --danger:#ff6b86;
     --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color-scheme: dark; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x:hidden; }
   html, body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); -webkit-text-size-adjust:100%; }
   body { min-height:100%; padding-bottom:120px; }
   button, select, input { font:inherit; color:inherit; }
@@ -87,8 +88,13 @@
   .cat { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:var(--surface-2); border:1px solid transparent; cursor:pointer; }
   .cat.sel { border-color:var(--accent); background:#223038; }
   .cat.busy { border-color:var(--warn); }
+  .cat .chk input { pointer-events:none; }
+  .cat-go { width:40px; height:40px; flex:none; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:20px; display:grid; place-items:center; padding:0; }
+  .linkbox { width:100%; min-height:72px; padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); color:var(--text); font-size:12px; word-break:break-all; resize:none; }
+  .chkout { font-size:13px; color:var(--muted); min-height:18px; overflow-wrap:anywhere; }
   .cat-main { flex:1; min-width:0; background:none; border:0; padding:0; text-align:left; color:inherit; }
   .cat-main b, .cat-main small { overflow:hidden; text-overflow:ellipsis; }
+  .cat-main { cursor:pointer; }
   .cat b { display:block; font-size:15px; font-weight:600; }
   .cat small { display:block; margin-top:2px; font-size:12.5px; color:var(--muted); }
   .tag { margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
@@ -111,11 +117,15 @@
   .scrim.show { opacity:1; pointer-events:auto; }
   .sheet { position:fixed; left:0; right:0; bottom:0; z-index:40; max-height:88%; overflow-y:auto; background:var(--surface); border-radius:22px 22px 0 0; border-top:1px solid var(--line); padding:8px 16px calc(20px + env(safe-area-inset-bottom)); transform:translateY(105%); transition:transform .28s; }
   .sheet.show { transform:none; }
-  .sheet-in { max-width:520px; margin:0 auto; display:grid; gap:18px; }
+  .sheet-in { max-width:520px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr); gap:18px; width:100%; }
+  .sheet { overflow-x:hidden; }
+  .sheet-in > * { min-width:0; }
+  .row-btn > span:last-child { min-width:0; }
+  .row-btn b, .row-btn small { overflow-wrap:anywhere; }
   .grab { width:40px; height:4px; border-radius:4px; background:var(--line); margin:0 auto 4px; }
   .sheet h3 { margin:0; font-size:18px; font-weight:800; }
   .sheet .scope { margin:3px 0 0; font-size:13px; color:var(--muted); }
-  .group { display:grid; gap:8px; }
+  .group { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; min-width:0; }
   .row-btn { display:flex; align-items:center; gap:14px; width:100%; min-height:56px; padding:10px 14px; border-radius:14px; border:1px solid var(--line); background:var(--surface-2); text-align:left; }
   .row-btn b { display:block; font-size:15px; font-weight:700; }
   .row-btn small { display:block; margin-top:1px; font-size:12.5px; color:var(--muted); }
@@ -151,6 +161,7 @@
   </header>
   <div class="live" id="live">
     <div class="live-row"><div class="msg" id="liveMsg"></div><button class="btn danger sm" type="button" data-act="stop">Durdur</button></div>
+    <button class="btn sm" type="button" id="clearQ" data-act="clear-q" style="display:none">Bekleyen işleri temizle</button>
     <div class="bar"><span id="liveBar"></span></div>
     <div class="sub" id="liveSub"></div>
   </div>
@@ -264,9 +275,10 @@
       html += '<ul class="cat-list">' + part.map(function (c) {
         var on = !!sel[c.url], busy = st.runCat === c.url;
         var info = c.films ? c.films + ' film · ' + c.resolved + ' video' + (c.info ? ' · ' + c.info + ' TMDB' : '') + (c.failed ? ' · ⚠ ' + c.failed : '') : '';
-        return '<li><div class="cat' + (on ? ' sel' : '') + (busy ? ' busy' : '') + '"><span class="chk"><input type="checkbox" data-cat="' + esc(h) + '" value="' + esc(c.url) + '"' + (on ? ' checked' : '') + '><span></span></span>' +
-          '<button type="button" class="cat-main" data-act="cat-open" data-h="' + esc(h) + '" data-u="' + esc(c.url) + '"><b>' + esc((c.group ? c.group + ' › ' : '') + c.name) + '</b>' + (info ? '<small>' + esc(info) + '</small>' : '') + '</button>' +
-          '<span class="tag">' + (busy ? 'çalışıyor' : c.films ? (c.done ? '✓' : '') : 'taranmadı') + '</span></div></li>';
+        return '<li><div class="cat' + (on ? ' sel' : '') + (busy ? ' busy' : '') + '" data-act="cat-toggle" data-h="' + esc(h) + '" data-u="' + esc(c.url) + '"><span class="chk"><input type="checkbox" tabindex="-1" value="' + esc(c.url) + '"' + (on ? ' checked' : '') + '><span></span></span>' +
+          '<span class="cat-main"><b>' + esc((c.group ? c.group + ' › ' : '') + c.name) + '</b>' + (info ? '<small>' + esc(info) + '</small>' : '') + '</span>' +
+          '<span class="tag">' + (busy ? 'çalışıyor' : c.films ? (c.done ? '✓' : '') : 'taranmadı') + '</span>' +
+          '<button type="button" class="cat-go" data-act="cat-open" data-h="' + esc(h) + '" data-u="' + esc(c.url) + '" aria-label="Filmleri aç">›</button></div></li>';
       }).join('') + '</ul>';
       if (vis.length > lim) html += '<div class="more"><button class="btn block ghost" type="button" data-act="more" data-h="' + esc(h) + '">Daha fazla yükle (' + lim + ' / ' + vis.length + ')</button></div>';
     }
@@ -274,7 +286,13 @@
     var cc = document.querySelector('[data-cc="' + CSS.escape(h) + '"]'); if (cc) cc.textContent = vis.length ? vis.length + ' gösteriliyor' : '';
     bar();
   }
+  function updScan(h) {
+    var b = document.querySelector('[data-act="scan"][data-h="' + CSS.escape(h) + '"]'), s0 = site(h); if (!b || !s0) return;
+    var n = selUrls(h).length, x = stats(s0);
+    b.textContent = n ? 'Seçilenleri tara (' + n + ')' : x.d && x.d < s0.cats.length ? 'Devam et' : x.d ? 'Yeniden tara' : 'Tara';
+  }
   function bar() {
+    if (st.open) updScan(st.open);
     var h = st.open, n = h ? selUrls(h).length : 0;
     $('#selCount').textContent = n + ' kategori seçili';
     $('#selbar').classList.toggle('show', n > 0);
@@ -299,6 +317,9 @@
       var cn = ''; st.sites.forEach(function (x) { x.cats.forEach(function (c) { if (c.url === state.cat) cn = c.name; }); });
       $('#liveSub').textContent = (cn ? cn + ' · ' : '') + (state.phase === 'resolve' ? (state.cur ? '▶ ' + state.cur : 'video çözülüyor') : state.phase === 'list' ? 'film listeleniyor' : '') + (state.queue ? '  ·  sırada ' + state.queue : '');
       live.querySelector('[data-act="stop"]').style.display = act ? '' : 'none';
+      $('#clearQ').style.display = state.queue > 0 ? '' : 'none'; $('#clearQ').textContent = 'Bekleyen ' + state.queue + ' işi temizle';
+      if (state.infoLeft > 0) $('#liveMsg').textContent += ' · afiş/bilgi: ' + state.infoLeft + ' kaldı';
+      live.classList.toggle('on', !!(act || state.status || state.infoLeft > 0));
       return call('crawl-sites').then(function (sum) {
         var keep = st.sites; st.sites = sum;
         if (state.running) { st.busyHost = runningHost(state); st.runCat = state.cat || ''; }
@@ -340,36 +361,46 @@
       '<div class="group"><span class="label">Yayınla</span>' +
         '<button class="row-btn" type="button" data-act="github" data-h="' + esc(h) + '"><span class="ico">⬆</span><span><b>GitHub\'a yükle</b><small>Güncel listeyi depoya gönderir</small></span></button></div>');
   }
+  st.bad = {}; st.infoTried = {};
   function fstat(f, cur) {
     if (f.url === cur) return ['go', '▶ çözülüyor…'];
-    if (f.video) { var v = String(f.video).replace(/^https?:\/\//, ''); return ['ok', '✓ ' + v.slice(0, 48)]; }
+    if (f.video) { if (st.bad[f.url]) return ['bad', '✕ link bozuk']; var v = String(f.video).replace(/^https?:\/\//, ''); return ['ok', (st.good && st.good[f.url] ? '✓✓ ' : '✓ ') + v.slice(0, 40)]; }
     if ((f.tried || 0) >= 1) return ['bad', '✕ çözülemedi'];
     return ['', 'sırada'];
   }
-  function filmRows(fl, cur, lim) {
+  function filmRows(fl, cur, lim, d) {
     var out = fl.slice().sort(function (a, b) { return (a.url === cur ? -1 : 0) - (b.url === cur ? -1 : 0); }).slice(0, lim);
-    return out.map(function (f) {
+    d.view = out;
+    return out.map(function (f, i) {
       var si = f.site || {}, t = si.t || f.title || '', p = si.p || f.poster || 'no-poster.jpg', x = fstat(f, cur);
-      return '<div class="frow' + (f.url === cur ? ' run' : '') + '"><img loading="lazy" src="' + esc(p) + '" onerror="this.src=\'no-poster.jpg\'" alt=""><div><b>' + esc(t) + '</b><small class="' + x[0] + '">' + esc(x[1]) + '</small></div></div>';
+      return '<div class="frow' + (f.url === cur ? ' run' : '') + '" data-act="film" data-i="' + i + '"><img loading="lazy" src="' + esc(p) + '" onerror="this.onerror=null;this.src=\'no-poster.jpg\'" alt=""><div><b>' + esc(t) + '</b><small class="' + x[0] + '">' + esc(x[1]) + '</small></div></div>';
     }).join('');
   }
   function detailBody(d, fl, state) {
     var cur = state && state.running && state.phase === 'resolve' ? state.curUrl : '';
+    d.fl = fl;
     var n = fl.length, v = fl.filter(function (f) { return f.video; }).length, bad = fl.filter(function (f) { return !f.video && (f.tried || 0) >= 1 && f.url !== cur; }).length;
-    var hd = '<div class="scope">' + n + ' film · ' + v + ' video' + (bad ? ' · ⚠ ' + bad + ' çözülemedi' : '') + '</div>';
-    var rows = n ? filmRows(fl, cur, d.shown) : '<div class="empty">Bu kategori henüz taranmadı. "Burayı tara"ya bas.</div>';
+    var nb = fl.filter(function (f) { return st.bad[f.url]; }).length, ni = fl.filter(function (f) { return f.site; }).length;
+    var hd = '<div class="scope">' + n + ' film · ' + v + ' video · ' + ni + ' bilgili' + (bad ? ' · ⚠ ' + bad + ' çözülemedi' : '') + (nb ? ' · ✕ ' + nb + ' bozuk link' : '') + '</div>';
+    var rows = n ? filmRows(fl, cur, d.shown, d) : '<div class="empty">Bu kategori henüz taranmadı. "Burayı tara"ya bas.</div>';
     var more = n > d.shown ? '<button class="btn block ghost" type="button" data-act="d-more">Daha fazla (' + (n - d.shown) + ')</button>' : '';
-    return { head: hd, list: rows + more, retry: bad };
+    return { head: hd, list: rows + more, retry: bad + nb, ni: ni, n: n };
   }
   async function catSheet(h, u) {
     var s = site(h), c = s.cats.filter(function (y) { return y.url === u; })[0]; if (!c) return;
-    st.detail = { h: h, u: u, shown: 60, sig: '' };
+    st.detail = { h: h, u: u, shown: 60, sig: '', view: [], fl: [] };
+    var A = ' data-h="' + esc(h) + '" data-u="' + esc(u) + '"';
     openSheet('<div><h3>' + esc((c.group ? c.group + ' › ' : '') + c.name) + '</h3><div id="dHead"></div></div>' +
-      '<div class="fgrid"><button class="btn" type="button" data-act="cat-scan" data-h="' + esc(h) + '" data-u="' + esc(u) + '">Burayı tara</button>' +
-      '<button class="btn primary" type="button" data-act="cat-resolve" data-h="' + esc(h) + '" data-u="' + esc(u) + '">Videoları çöz</button></div>' +
-      '<button class="btn block" id="dRetry" type="button" data-act="cat-retry" data-h="' + esc(h) + '" data-u="' + esc(u) + '" style="display:none">Çözülemeyenleri tekrar dene</button>' +
+      '<div class="fgrid"><button class="btn" type="button" data-act="cat-scan"' + A + '>Burayı tara</button>' +
+      '<button class="btn primary" type="button" data-act="cat-resolve"' + A + '>Videoları çöz</button>' +
+      '<button class="btn" type="button" data-act="cat-info"' + A + '>Afiş ve bilgi çek</button>' +
+      '<button class="btn" type="button" data-act="cat-check"' + A + '>Linkleri kontrol et</button></div>' +
+      '<div class="chkout" id="dChk"></div>' +
+      '<button class="btn block" id="dRetry" type="button" data-act="cat-retry"' + A + ' style="display:none">Çözülemeyen ve bozukları tekrar çöz</button>' +
       '<div class="group" id="dList"></div>');
     await refreshDetail(true);
+    var d = st.detail;
+    if (d && d.fl.length && d.fl.some(function (f) { return !f.site; }) && !st.infoTried[u]) { st.infoTried[u] = 1; try { await call('crawl-info', h, [u]); } catch (e) {} }
   }
   async function refreshDetail(force) {
     var d = st.detail; if (!d) return;
@@ -377,11 +408,53 @@
       var state = await call('crawl-state'), fl = await call('crawl-films', d.h, d.u);
       if (!st.detail || st.detail !== d) return;
       var b = detailBody(d, fl, state);
-      var sig = b.head + b.list.length + '|' + (state.curUrl || '') + '|' + fl.filter(function (f) { return f.video; }).length + '|' + fl.filter(function (f) { return (f.tried || 0) >= 1; }).length;
+      var sig = b.head + b.list.length + '|' + (state.curUrl || '') + '|' + fl.filter(function (f) { return f.video; }).length + '|' + fl.filter(function (f) { return (f.tried || 0) >= 1; }).length + '|' + b.ni;
       if (!force && sig === d.sig) return;
       d.sig = sig;
       $('#dHead').innerHTML = b.head; $('#dList').innerHTML = b.list; $('#dRetry').style.display = b.retry ? '' : 'none';
     } catch (e) {}
+  }
+  function filmSheet(i) {
+    var d = st.detail; if (!d || !d.view[i]) return;
+    var f = d.view[i], si = f.site || {}, t = si.t || f.title || '', h = d.h, u = d.u;
+    st.back = { h: h, u: u }; st.film = { f: f, h: h, u: u };
+    st.detail = null;
+    var x = fstat(f, ''), p = si.p || f.poster || 'no-poster.jpg';
+    openSheet('<div style="display:flex;gap:12px;align-items:flex-start"><img src="' + esc(p) + '" onerror="this.onerror=null;this.src=\'no-poster.jpg\'" style="width:64px;height:96px;border-radius:8px;object-fit:cover;flex:none" alt=""><div style="min-width:0"><h3 style="font-size:16px;overflow-wrap:anywhere">' + esc(t) + '</h3><p class="scope">' + esc(x[1]) + '</p></div></div>' +
+      (si.d ? '<p class="scope" style="margin:0;max-height:96px;overflow:auto">' + esc(si.d) + '</p>' : '') +
+      (f.video ? '<textarea class="linkbox" id="fLink" readonly>' + esc(f.video) + '</textarea>' : '<div class="chkout">Bu film henüz çözülmedi.</div>') +
+      '<div class="chkout" id="fChk"></div>' +
+      '<div class="group">' +
+      (f.video ? '<div class="two"><button class="btn primary" type="button" data-act="f-copy">Linki kopyala</button><button class="btn" type="button" data-act="f-play">Oynat</button></div>' +
+        '<button class="btn block" type="button" data-act="f-check">Linki kontrol et</button>' : '') +
+      '<button class="btn block" type="button" data-act="f-redo">Tekrar çöz</button>' +
+      '<button class="btn block ghost" type="button" data-act="f-page">Film sayfasını aç</button>' +
+      '<button class="btn block ghost" type="button" data-act="f-back">‹ Listeye dön</button></div>');
+  }
+  async function checkLink(f) {
+    var ref = f.videoRef || f.url, r = await pfetch(f.video, ref, 400);
+    if (r.error) return { ok: false, msg: r.error };
+    var b = String(r.body || '');
+    if (r.code >= 400) return { ok: false, msg: 'HTTP ' + r.code };
+    if (/^\s*#EXTM3U/.test(b)) return { ok: true, msg: 'Çalışıyor (HLS akışı, ' + r.code + ')' };
+    if (/\.m3u8|\.txt/i.test(f.video)) return { ok: false, msg: 'Akış listesi değil (' + r.code + ')' };
+    return { ok: true, msg: 'Erişiliyor (' + r.code + ', ' + (r.len || 0) + ' bayt)' };
+  }
+  async function checkAll(h, u) {
+    if (st.checking) { toast('Kontrol sürüyor'); return; }
+    st.checking = true; st.good = st.good || {};
+    try {
+      var fl = await call('crawl-films', h, u), list = fl.filter(function (f) { return f.video; }), bad = 0, ok = 0;
+      for (var i = 0; i < list.length; i++) {
+        if (!st.detail || st.detail.u !== u) break;
+        var e = $('#dChk'); if (e) e.textContent = 'Kontrol: ' + (i + 1) + '/' + list.length + ' · ✓ ' + ok + ' · ✕ ' + bad;
+        var r = await checkLink(list[i]);
+        if (r.ok) { ok++; st.good[list[i].url] = 1; delete st.bad[list[i].url]; } else { bad++; st.bad[list[i].url] = 1; delete st.good[list[i].url]; }
+        if (st.detail) st.detail.sig = '';
+      }
+      var e2 = $('#dChk'); if (e2) e2.textContent = 'Bitti: ' + ok + ' çalışıyor, ' + bad + ' bozuk';
+    } catch (err) { toast(err && err.message ? err.message : 'Hata'); }
+    st.checking = false; refreshDetail(true);
   }
   /* ---- Kaynak testi: wp-json / sitemap / film sayfası / oynatıcı ---- */
   async function pfetch(url, ref, max) {
@@ -487,6 +560,7 @@
         case 'stop': await call('crawl-stop'); toast('Durduruldu'); refresh(); break;
         case 'scan': case 'scan-sel': {
           var hh = a === 'scan-sel' ? st.open : h, s0 = site(hh), x = stats(s0), urls = selUrls(hh);
+          if (urls.length) { try { await call('crawl-clear-queue'); } catch (e0) {} }
           if (!urls.length) {
             if (x.d && x.d < s0.cats.length) urls = s0.cats.filter(function (c) { return !c.done; }).map(function (c) { return c.url; });
             else urls = s0.cats.map(function (c) { return c.url; });
@@ -496,10 +570,26 @@
         }
         case 'probe': probe(h); break;
         case 'copy-probe': toast(await copy($('#probeOut').textContent) ? 'Kopyalandı' : 'Kopyalanamadı'); break;
+        case 'cat-toggle': {
+          var m = selOf(h), uu = b.dataset.u;
+          if (m[uu]) delete m[uu]; else m[uu] = 1;
+          b.classList.toggle('sel', !!m[uu]); var ip = b.querySelector('input'); if (ip) ip.checked = !!m[uu]; bar(); break;
+        }
+        case 'clear-q': { var cq = await call('crawl-clear-queue'); toast(cq + ' bekleyen iş temizlendi'); refresh(); break; }
         case 'cat-open': catSheet(h, b.dataset.u); break;
-        case 'cat-scan': { var rl = await call('crawl-list', h, [b.dataset.u], pages(h)); if (rl) toast(rl); else { toast('Listeleniyor'); if (st.resolve[h]) await call('crawl-resolve', h, [b.dataset.u], 100000); } refresh(); break; }
+        case 'film': filmSheet(Number(b.dataset.i)); break;
+        case 'f-back': catSheet(st.back.h, st.back.u); break;
+        case 'f-copy': { var lk = st.film.f.video; var okc = await copy(lk); if (!okc) { var ta = $('#fLink'); if (ta) { ta.focus(); ta.select(); } } toast(okc ? 'Link kopyalandı' : 'Kopyalanamadı: yazıyı basılı tutup kopyala'); break; }
+        case 'f-play': { var ff = st.film.f; call('open', 'ghost://player?src=' + encodeURIComponent(ff.video) + '&title=' + encodeURIComponent((ff.site && ff.site.t) || ff.title || '') + '&ref=' + encodeURIComponent(ff.videoRef || ff.url), { newTab: true }); break; }
+        case 'f-page': call('open', st.film.f.url, { newTab: true }); break;
+        case 'f-check': { var fe = $('#fChk'); fe.textContent = 'Kontrol ediliyor…'; var cr = await checkLink(st.film.f); st.good = st.good || {}; if (cr.ok) { delete st.bad[st.film.f.url]; st.good[st.film.f.url] = 1; } else { st.bad[st.film.f.url] = 1; delete st.good[st.film.f.url]; } fe.textContent = (cr.ok ? '✓ ' : '✕ ') + cr.msg; break; }
+        case 'f-redo': { var fr = st.film; await call('crawl-retry', fr.h, fr.u, [fr.f.url]); var rr2 = await call('crawl-resolve', fr.h, [fr.u], 100000); toast(rr2 || 'Yeniden çözülecek'); delete st.bad[fr.f.url]; refresh(); break; }
+        case 'cat-info': { var ci = await call('crawl-info', h, [b.dataset.u]); toast(ci ? ci + ' film için bilgi çekiliyor' : 'Çekilecek bilgi yok'); break; }
+        case 'cat-check': checkAll(h, b.dataset.u); break;
+
+        case 'cat-scan': { var rl = await call('crawl-list', h, [b.dataset.u], pages(h)); if (rl) toast(rl); else { toast('Listeleniyor'); if (st.resolve[h]) await call('crawl-resolve', h, [b.dataset.u], 100000); } st.infoTried[b.dataset.u] = 0; refresh(); break; }
         case 'cat-resolve': { var rv = await call('crawl-resolve', h, [b.dataset.u], 100000); toast(rv || 'Çözme başladı'); refresh(); break; }
-        case 'cat-retry': { await doRetry(h, [b.dataset.u]); break; }
+        case 'cat-retry': { var bu = b.dataset.u; var flx = await call('crawl-films', h, bu); var badU = flx.filter(function (f) { return st.bad[f.url]; }).map(function (f) { return f.url; }); if (badU.length) { await call('crawl-retry', h, bu, badU); badU.forEach(function (x) { delete st.bad[x]; }); } await doRetry(h, [bu]); break; }
         case 'check-new': {
           var d = site(h).cats.filter(function (c) { return c.done; }).map(function (c) { return c.url; });
           if (!d.length) { toast('Önce bir kategoriyi tamamen tara'); break; }
