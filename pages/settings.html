@@ -709,7 +709,7 @@ function renderCrawler(sum, running) {
 function filmRow(f) {
   const d = document.createElement('div'); d.className = 'litem' + (f.video ? ' ok' : (f.tried || 0) >= 1 ? ' fail' : '') + (cCurUrl && cCurUrl === f.url ? ' solving' : ''); d.dataset.url = f.url; d.insertAdjacentHTML('beforeend', '<div class="fb"><i></i></div>');
   const tm = f.tmdb || null, poster = (tm && tm.poster) || f.poster || '';
-  if (poster) { const im = document.createElement('img'); im.className = 'poster'; im.loading = 'lazy'; im.src = poster; im.alt = ''; im.onerror = () => im.remove(); d.append(im); }
+  { const NP = 'ghost://static/no-poster.jpg', im = document.createElement('img'); im.className = 'poster'; im.loading = 'lazy'; im.src = poster || NP; im.alt = ''; im.onerror = () => { if (im.src.indexOf('no-poster') < 0) im.src = NP; else im.remove(); }; d.append(im); }
   const t = document.createElement('div'); t.className = 'lt'; const n = document.createElement('div'); n.className = 'ln'; n.textContent = (tm && tm.title) || (f.title || '').replace(/^\d{4}\s+\d+\s+\d(\.\d)?\s+/, '').replace(/^\d{4}\s+\d+\s+/, '') || f.url;
   const sm = document.createElement('small');
   if (tm) sm.textContent = [tm.year, tm.rating ? '★ ' + tm.rating : '', tm.type === 'tv' ? 'Dizi' : ''].filter(Boolean).join(' · ') + (f.video ? ' · ▶ video hazır' : '');

@@ -18,6 +18,7 @@ for (const f of ['newtab', 'settings', 'player']) {
 write('remote.html', read('pages', 'remote.html'));
 write('shared.css', read('pages', 'shared.css'));
 fs.copyFileSync(path.join(root, 'pages', 'logo.png'), path.join(out, 'logo.png'));
+fs.copyFileSync(path.join(root, 'pages', 'no-poster.jpg'), path.join(out, 'no-poster.jpg'));
 write('theme.js', read('pages', 'theme.js'));
 write('spatial.js', read('pages', 'spatial.js'));
 write('android-shim.js', fs.readFileSync(path.join(__dirname, '..', 'shim', 'android-shim.js'), 'utf8'));
