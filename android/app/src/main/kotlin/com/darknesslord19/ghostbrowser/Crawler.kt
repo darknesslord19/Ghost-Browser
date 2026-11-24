@@ -629,7 +629,10 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
     private val HD_ID = Regex("-([A-Za-z0-9_]{8,14})\\.mp4")
 
-    private fun hdId(video: String): String = HD_ID.find(video)?.groupValues?.get(1) ?: ""
+    private fun hdId(video: String): String {
+        val id = HD_ID.find(video)?.groupValues?.get(1) ?: return ""
+        return if (id.any { it.isUpperCase() } && id.any { it.isLowerCase() }) id else ""
+    }
 
     /** hdfilmcehennemi: aynı oynatıcı kimliği birden çok farklı filmde görünüyorsa site yer tutucu/yanlış kaynak vermiştir; hepsini çözülemeyen say. */
     private fun cleanDecoys(h: String): Int {
