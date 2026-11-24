@@ -460,6 +460,11 @@
     var am = eb.match(/"file":\s*av\('([^']*)'\)/);
     log('   av GİRDİ (' + (am ? am[1].length : 0) + '): ' + (am ? am[1].slice(0, 900) : 'yok'));
     var qv = eb.match(/var _qv = (\{[^;]{0,500})/); log('   _qv: ' + (qv ? qv[1].replace(/\s+/g, ' ').slice(0, 400) : 'yok'));
+    var ui = eb.search(/function\s+_\s*\(|[\s;,({]_\s*=\s*function|(?:var|let|const)\s+_\s*=/);
+    log('   _ KODU: ' + (ui >= 0 ? eb.slice(ui, ui + 2600).replace(/\s+/g, ' ') : 'bulunamadı'));
+    var qf = eb.match(/var _qv = (\{[^}]*\})/); log('   _qv TAM: ' + (qf ? qf[1].slice(0, 1400) : 'yok'));
+    var qi = [], qr = /_qv/g, qm; while ((qm = qr.exec(eb)) && qi.length < 8) { qi.push(qm.index); qr.lastIndex = qm.index + 4; }
+    qi.slice(1, 6).forEach(function (ix, n) { log('   _qv kullanım ' + (n + 1) + ': ' + eb.slice(Math.max(0, ix - 200), ix + 500).replace(/\s+/g, ' ')); });
     var ext = []; eb.replace(/<script[^>]+src=["']([^"']+)["']/gi, function (m, u) { ext.push(u); return m; }); log('   harici script: ' + ext.join(' | ').slice(0, 300));
     log('   başlangıç: ' + eb.slice(0, 400).replace(/\s+/g, ' '));
     log('BİTTİ');
