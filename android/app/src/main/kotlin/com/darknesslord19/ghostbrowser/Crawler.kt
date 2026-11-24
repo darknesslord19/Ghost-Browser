@@ -626,9 +626,66 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
 
     private fun isSeries(u: String): Boolean = Regex("^https?://[^/]+/(series|dizi|diziler|show|tv-series)/", RegexOption.IGNORE_CASE).containsMatchIn(u)
 
+
+    private val HD_ID = Regex("-([A-Za-z0-9_]{8,14})\\.mp4")
+
+    private fun hdId(video: String): String = HD_ID.find(video)?.groupValues?.get(1) ?: ""
+
+    /** hdfilmcehennemi: aynı oynatıcı kimliği birden çok farklı filmde görünüyorsa site yer tutucu/yanlış kaynak vermiştir; hepsini çözülemeyen say. */
+    private fun cleanDecoys(h: String): Int {
+        val site = sites.optJSONObject(h) ?: return 0
+        val byId = HashMap<String, MutableList<JSONObject>>()
+        val ca = cats(site)
+        for (i in 0 until ca.length()) {
+            val fl = ca.getJSONObject(i).optJSONArray("films") ?: continue
+            for (k in 0 until fl.length()) {
+                val f = fl.getJSONObject(k)
+                val v = f.optString("video")
+                if (v.isEmpty()) continue
+                val id = hdId(v)
+                if (id.isEmpty()) continue
+                byId.getOrPut(id) { ArrayList() }.add(f)
+            }
+        }
+        var n = 0
+        for ((_, list) in byId) {
+            if (list.map { it.optString("url") }.toSet().size < 2) continue
+            val dec = site.optJSONArray("decoys") ?: JSONArray().also { site.put("decoys", it) }
+            val id0 = hdId(list[0].optString("video"))
+            var have = false
+            for (q in 0 until dec.length()) if (dec.optString(q) == id0) have = true
+            if (!have && id0.isNotEmpty()) dec.put(id0)
+            for (f in list) {
+                f.put("video", "").put("videoRef", "").put("tried", 2)
+                n++
+            }
+        }
+        if (n > 0) schedule()
+        return n
+    }
+
+    private fun hdDuplicate(h: String, id: String, selfUrl: String): Boolean {
+        val site = sites.optJSONObject(h) ?: return false
+        val dec = site.optJSONArray("decoys")
+        if (dec != null) for (q in 0 until dec.length()) if (dec.optString(q) == id) return true
+        val ca = cats(site)
+        for (i in 0 until ca.length()) {
+            val fl = ca.getJSONObject(i).optJSONArray("films") ?: continue
+            for (k in 0 until fl.length()) {
+                val f = fl.getJSONObject(k)
+                if (f.optString("url") != selfUrl && f.optString("video").contains(id)) return true
+            }
+        }
+        return false
+    }
+
     private fun runResolve(j: Job, g: Int, done: () -> Unit) {
         val cat = findCat(j.site, j.cat) ?: return done()
         val films = cat.optJSONArray("films") ?: return done()
+        if (j.site.contains("hdfilmcehennemi")) {
+            val cl = cleanDecoys(j.site)
+            if (cl > 0) cat.put("log", (cat.optString("log") + "\nyinelenen kaynak temizlendi: " + cl).takeLast(3000))
+        }
         val todo = ArrayList<JSONObject>()
         var onlyRetry = false
         for (i in 0 until films.length()) if (films.getJSONObject(i).let { it.has("retry") && it.optString("video").isEmpty() }) { onlyRetry = true; break }
@@ -752,6 +809,15 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
                             evalJs("(function(){var i=document.querySelector('iframe[src*=\"/video/embed/\"]');return i?i.src:''})()", g) { r ->
                                 val id = Regex("embed/([A-Za-z0-9_-]+)").find(r ?: "")?.groupValues?.get(1) ?: ""
                                 val m = if (id.isNotEmpty()) t.media.firstOrNull { it.url.contains(id) } else null
+                                if (m != null && hdDuplicate(j.site, id, f.optString("url"))) {
+                                    cat.put("log", (cat.optString("log") + "\nyinelenen kaynak (" + id + "): " + f.optString("url").takeLast(30)).takeLast(3000))
+                                    cleanDecoys(j.site)
+                                    f.put("video", "").put("videoRef", "").put("tried", 2)
+                                    noteRes(f.optString("url"), "", 2)
+                                    schedule()
+                                    step(80, g) { nextFilm() }
+                                    return@evalJs
+                                }
                                 if (m != null) evalJs("document.title.slice(0,70)+' | '+location.href.slice(-40)", g) { ti ->
                                     cat.put("log", (cat.optString("log") + "\nhd[" + f.optString("url").takeLast(28) + "] id=" + id + " title=" + (ti ?: "") + " media=" + t.media.joinToString(",") { it.url.substringAfter("/hls/").take(34) } + " @" + waited).takeLast(3000))
                                 }
