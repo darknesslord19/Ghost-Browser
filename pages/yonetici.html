@@ -435,6 +435,12 @@
     while ((bm = b64.exec(html)) && dec.length < 12) { try { var t = atob(bm[1]); try { t = decodeURIComponent(escape(t)); } catch (e2) {} if (/https?:\/\/|<iframe|\.m3u8|\.mp4/i.test(t)) dec.push(t); } catch (e) {} }
     log('   çözülen base64 (' + dec.length + '):'); dec.slice(0, 5).forEach(function (t) { log('     ' + t.replace(/\s+/g, ' ').slice(0, 200)); });
     dec.forEach(function (t) { (t.match(/https?:\/\/[^"'\s<>\\]+/g) || []).forEach(function (u) { if (!/youtube|google/i.test(u) && !urls[u]) { urls[u] = 1; ca.unshift(u); } }); });
+    var sx = html.match(/"sx":\{[^}]*"t":\[([^\]]*)\]/);
+    var rot = function (t) { return t.replace(/[a-zA-Z]/g, function (c) { var b = c <= 'Z' ? 65 : 97; return String.fromCharCode((c.charCodeAt(0) - b + 13) % 26 + b); }); };
+    var found = [];
+    if (sx) (sx[1].match(/"([^"]+)"/g) || []).forEach(function (q) { var v = q.slice(1, -1); try { var d = atob(rot(v)); if (/^https?:\/\//.test(d)) found.push(d); } catch (e) {} });
+    log('   scx kaynakları (' + found.length + '): ' + found.join(' | ').slice(0, 300));
+    found.forEach(function (u) { if (!urls[u]) { urls[u] = 1; ca.unshift(u); } });
     var cand = ca.filter(function (u) { return /rapid|embed|player|vid|stream|play|\/v\//i.test(u); })[0] || (fr.length && (fr[0].match(/src=["']([^"']+)/i) || [])[1]);
     if (!cand) { log('4) oynatıcı adresi bulunamadı (sayfa JS ile üretiyor olabilir)'); log('BİTTİ'); return; }
     if (cand.slice(0, 2) === '//') cand = 'https:' + cand;
@@ -445,8 +451,11 @@
     var vid = eb.match(/https?:\/\/[^"'\s\\]+\.(?:m3u8|mp4)[^"'\s\\]*/i);
     log('   ' + ep.code + ' · ' + ep.len + ' bayt');
     log('   düz video adresi: ' + (vid ? vid[0].slice(0, 110) : 'yok'));
-    log('   şifreli/paketli kod: ' + (/eval\(function\(p,a,c,k|atob\(|\\x[0-9a-f]{2}/i.test(eb) ? 'var' : 'yok'));
-    log('   başlangıç: ' + eb.slice(0, 160).replace(/\s+/g, ' '));
+    log('   paketli(eval): ' + (/eval\(function\(p,a,c,k/.test(eb) ? 'var' : 'yok') + ' · atob: ' + (/atob\(/.test(eb) ? 'var' : 'yok') + ' · script: ' + ((eb.match(/<script/gi) || []).length));
+    var hits = [], hre = /(m3u8|\.mp4|"file"|sources?\s*[:=]|hls|\.txt)/gi, hm;
+    while ((hm = hre.exec(eb)) && hits.length < 5) { hits.push(eb.slice(Math.max(0, hm.index - 90), hm.index + 180).replace(/\s+/g, ' ')); hre.lastIndex = hm.index + 180; }
+    log('   ipuçları (' + hits.length + '):'); hits.forEach(function (t) { log('     ' + t); });
+    log('   başlangıç: ' + eb.slice(0, 400).replace(/\s+/g, ' '));
     log('BİTTİ');
   }
   function menuSheet(h) {
