@@ -1531,7 +1531,7 @@ post({hello:1});
                 "crawl-retry" -> reply(true, crawler.retry(args.optString(0), args.optString(1), args.optJSONArray(2) ?: JSONArray()))
                 "crawl-enrich" -> reply(true, crawler.enrich(args.optString(0), args.optJSONArray(1) ?: JSONArray(), store.str("tmdbKey")))
                 "crawl-clear-queue" -> reply(true, crawler.clearQueue())
-                "crawl-info" -> reply(true, crawler.siteInfo(args.optString(0), args.optJSONArray(1) ?: JSONArray()))
+                "crawl-info" -> reply(true, crawler.siteInfo(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optBoolean(2, false)))
                 "crawl-stop" -> { crawler.stop(); crawler.stopEnrich(); reply(true, true) }
                 "crawl-export" -> reply(true, crawler.export(args.optString(0)))
                 "crawl-save-m3u" -> try { reply(true, crawler.saveM3u(args.optString(0), args.optJSONArray(1) ?: JSONArray(), args.optString(2, "m3u8"))) } catch (e: Exception) { reply(false, null, e.message ?: "Kaydedilemedi") }

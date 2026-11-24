@@ -414,6 +414,15 @@
       $('#dHead').innerHTML = b.head; $('#dList').innerHTML = b.list; $('#dRetry').style.display = b.retry ? '' : 'none';
     } catch (e) {}
   }
+  async function watchInfo() {
+    for (var i = 0; i < 400; i++) {
+      await new Promise(function (r) { setTimeout(r, 1500); });
+      var state = await call('crawl-state'), e = $('#dChk');
+      if (e) e.textContent = state.infoLeft > 0 ? 'Site bilgisi: ' + state.infoLeft + ' kaldı · ✓ ' + state.infoOk + ' · ✕ ' + state.infoFail : 'Site bilgisi bitti: ✓ ' + state.infoOk + ' · ✕ ' + state.infoFail + (state.infoFail && state.infoErr ? ' · neden: ' + state.infoErr : '');
+      if (st.detail) st.detail.sig = '';
+      if (!(state.infoLeft > 0)) break;
+    }
+  }
   function filmSheet(i) {
     var d = st.detail; if (!d || !d.view[i]) return;
     var f = d.view[i], si = f.site || {}, t = si.t || f.title || '', h = d.h, u = d.u;
@@ -545,6 +554,7 @@
   function menuSheet(h) {
     openSheet('<div><h3>' + esc(h) + '</h3></div><div class="group">' +
       '<button class="row-btn" type="button" data-act="add-cat" data-h="' + esc(h) + '"><span class="ico">+</span><span><b>Kategori ekle</b><small>Adresini girerek elle ekle</small></span></button>' +
+      '<button class="row-btn" type="button" data-act="tmdb-menu"><span class="ico">🔑</span><span><b>TMDB anahtarı</b><small>"TMDB bilgisi çek" için gerekir</small></span></button>' +
       '<button class="row-btn" type="button" data-act="probe" data-h="' + esc(h) + '"><span class="ico">⚡</span><span><b>Kaynak testi</b><small>Hızlı çözme mümkün mü diye siteyi dener</small></span></button>' +
       '<button class="row-btn danger" type="button" data-act="del-site" data-h="' + esc(h) + '"><span class="ico">🗑</span><span><b>Siteyi sil</b><small>Tüm kategoriler ve veriler silinir</small></span></button></div>');
   }
@@ -584,7 +594,9 @@
         case 'f-page': call('open', st.film.f.url, { newTab: true }); break;
         case 'f-check': { var fe = $('#fChk'); fe.textContent = 'Kontrol ediliyor…'; var cr = await checkLink(st.film.f); st.good = st.good || {}; if (cr.ok) { delete st.bad[st.film.f.url]; st.good[st.film.f.url] = 1; } else { st.bad[st.film.f.url] = 1; delete st.good[st.film.f.url]; } fe.textContent = (cr.ok ? '✓ ' : '✕ ') + cr.msg; break; }
         case 'f-redo': { var fr = st.film; await call('crawl-retry', fr.h, fr.u, [fr.f.url]); var rr2 = await call('crawl-resolve', fr.h, [fr.u], 100000); toast(rr2 || 'Yeniden çözülecek'); delete st.bad[fr.f.url]; refresh(); break; }
-        case 'cat-info': { var ci = await call('crawl-info', h, [b.dataset.u]); toast(ci ? ci + ' film için bilgi çekiliyor' : 'Çekilecek bilgi yok'); break; }
+        case 'cat-info': { var ci = await call('crawl-info', h, [b.dataset.u], true); toast(ci < 0 ? 'Bilgi çekme zaten sürüyor' : ci ? ci + ' film için site bilgisi çekiliyor' : 'Siteden çekilecek film kalmadı (hepsinde bilgi var)'); if (ci > 0) watchInfo(); break; }
+        case 'tmdb-key': { var tk = ($('#tkey').value || '').trim(); await call('set', { tmdbKey: tk }); st.cfg.tmdbKey = tk; closeSheet(); toast(tk ? 'TMDB anahtarı kaydedildi' : 'TMDB anahtarı silindi'); break; }
+        case 'tmdb-menu': openSheet('<div><h3>TMDB anahtarı</h3><p class="scope">Site afiş/bilgi vermezse TMDB kullanılır. Anahtar yalnızca bu cihazda kalır.</p></div><input class="text-input" id="tkey" type="text" placeholder="TMDB API anahtarı" value="' + esc(st.cfg.tmdbKey || '') + '"><div class="two"><button class="btn" type="button" data-act="close">Vazgeç</button><button class="btn primary" type="button" data-act="tmdb-key">Kaydet</button></div>'); break;
         case 'cat-check': checkAll(h, b.dataset.u); break;
 
         case 'cat-scan': { var rl = await call('crawl-list', h, [b.dataset.u], pages(h)); if (rl) toast(rl); else { toast('Listeleniyor'); if (st.resolve[h]) await call('crawl-resolve', h, [b.dataset.u], 100000); } st.infoTried[b.dataset.u] = 0; refresh(); break; }

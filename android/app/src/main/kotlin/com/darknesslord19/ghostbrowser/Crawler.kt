@@ -251,10 +251,14 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     }
 
     @Volatile var infoLeft = 0
+    @Volatile var infoOk = 0
+    @Volatile var infoFail = 0
+    @Volatile var infoErr = ""
 
     /** Plus: film sayfalarından ad, afiş ve açıklamayı düz HTTP ile, 4 iş parçacığıyla çeker. */
-    fun siteInfo(h: String, urls: JSONArray): Int {
-        if (!BuildConfig.PLUS_APP || infoLeft > 0) return 0
+    fun siteInfo(h: String, urls: JSONArray, force: Boolean = false): Int {
+        if (!BuildConfig.PLUS_APP) return 0
+        if (infoLeft > 0) return -1
         val site = sites.optJSONObject(h) ?: return 0
         val want = HashSet<String>()
         for (i in 0 until urls.length()) want.add(urls.getString(i))
@@ -266,18 +270,23 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
             val fl = c.optJSONArray("films") ?: continue
             for (k in 0 until fl.length()) {
                 val f = fl.getJSONObject(k)
-                if (!f.has("site") && f.optInt("siteTried") == 0 && !f.has("series")) todo.add(f)
+                if (!f.has("site") && (force || f.optInt("siteTried") == 0) && !f.has("series")) todo.add(f)
             }
         }
         if (todo.isEmpty()) return 0
         infoLeft = todo.size
+        infoOk = 0
+        infoFail = 0
+        infoErr = ""
         val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
         for (f in todo) pool.execute {
             try {
                 applySite(f, httpGet(f.optString("url"), "", 700000))
-                if (!f.has("site")) f.put("siteTried", 1)
-            } catch (_: Exception) {
+                if (f.has("site")) infoOk++ else { f.put("siteTried", 1); infoFail++; infoErr = "sayfada ad/afiş (og:title, og:image) yok" }
+            } catch (e: Exception) {
                 f.put("siteTried", 1)
+                infoFail++
+                infoErr = (e.message ?: e.javaClass.simpleName).take(80)
             }
             main.post {
                 infoLeft = maxOf(0, infoLeft - 1)
@@ -825,7 +834,8 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
         val t = meta(html, Regex("property=[\"']og:title[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
         val p = meta(html, Regex("property=[\"']og:image[\"'][^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
         val d = meta(html, Regex("(?:name=[\"']description[\"']|property=[\"']og:description[\"'])[^>]*content=[\"']([^\"']*)", RegexOption.IGNORE_CASE))
-        if (t.isNotEmpty() && p.startsWith("http")) f.put("site", JSONObject().put("t", t.take(200)).put("p", p).put("d", d.take(1200)))
+        val pu = try { if (p.startsWith("http")) p else if (p.isNotEmpty()) URI(f.optString("url")).resolve(if (p.startsWith("//")) "https:$p" else p).toString() else "" } catch (_: Exception) { "" }
+        if (t.isNotEmpty() && pu.startsWith("http")) f.put("site", JSONObject().put("t", t.take(200)).put("p", pu).put("d", d.take(1200)))
     }
 
     /** Başarılıysa "" döner; aksi halde nedeni. */
@@ -1418,7 +1428,7 @@ class Crawler(ctx: Context, private val host: CrawlHost, private val main: Handl
     // ---------------- sorgular ----------------
     fun stateJson(): JSONObject = JSONObject().put("running", running).put("status", status).put("left", jobs.size).put("total", totalJobs)
         .put("enriching", enriching).put("enrichLeft", enrichLeft)
-        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("gh", ghStatus).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size).put("infoLeft", infoLeft)
+        .put("phase", phase).put("cat", curCat).put("prog", prog).put("progTotal", progTotal).put("gh", ghStatus).put("cur", curTitle).put("curUrl", curUrl).put("recent", recent()).put("queue", jobs.size).put("infoLeft", infoLeft).put("infoOk", infoOk).put("infoFail", infoFail).put("infoErr", infoErr)
 
     fun summary(only: String = ""): JSONArray {
         val out = JSONArray()
